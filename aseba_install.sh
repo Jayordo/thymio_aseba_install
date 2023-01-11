@@ -1,8 +1,11 @@
 sudo apt-get update
 
-sudo apt-get install
-    mesa-common-dev libgl1-mesa-dev \
-    clang clang-format g++-multilib gdb \
+sudo apt-get install -y \
+    mesa-common-dev \
+	libgl1-mesa-dev \
+    clang clang-format \
+	build-essential \
+	gdb \
     git \
     cmake \
     ninja-build \
@@ -21,10 +24,12 @@ sudo apt-get install
     libqt5svg5-dev \
     libqt5x11extras5-dev \
     libqwt-qt5-dev \
+# g++-multilib \
 
-# git clone --recursive https://github.com/mobsya/aseba.git
-# cd aseba
+cd ~/
+git clone --recursive https://github.com/mobsya/aseba.git
+cd aseba
 
-# mkdir build && cd build
-# cmake  -DMOBSYA_WEBAPPS_ROOT_DIR=share/ -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF ..
-# make
+mkdir build && cd build
+cmake  -DMOBSYA_WEBAPPS_ROOT_DIR=share/ -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF ..
+make
