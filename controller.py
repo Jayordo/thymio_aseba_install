@@ -73,5 +73,5 @@ if __name__ == '__main__':
     loop = glib.MainLoop.new(None, False)
     #call the callback of Braitenberg algorithm
     handle = gobject.timeout_add (100, Braitenberg) #every 0.1 sec
-    #loop.run()
+    # loop.run()
     loop.quit()
