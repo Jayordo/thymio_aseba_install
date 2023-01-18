@@ -1,20 +1,24 @@
 import cv2
 import climage
+import select
+import sys
+import time
 
 vid = cv2.VideoCapture(0)
 while True:
-    # Capture the video frame by frame
-    ret, frame = vid.read()
-    # function to resize
-    # frame = cv2.resize(frame, (700, 500))
+    user_input = select.select([sys.stdin], [], [], 1)[0]
+    if user_input:
+        value = sys.stdin.readline().rstrip()
+        if value == "q":
+            print("Exiting")
+            break
+        else:
+            print("You entered: %s" % value)
+    else:
+        ret, frame = vid.read()
+        cv2.imwrite('/tmp/frame.png', frame)
+        output = climage.convert('/tmp/frame.png', is_truecolor=False, width=150, palette="linuxconsole")
+        print(output)
+        time.sleep(0.2)
 
-    # Display the resulting frame
-    cv2.imwrite('/tmp/frame.png', frame)
-    output = climage.convert('/tmp/frame.png', is_truecolor=False, width=150 ,palette="linuxconsole")
-    print(output)
-    # the 'q' button is set as the quitting button you may use any desired button of your choice
-    #this only works on cv2 show windows
-    if cv2.waitKey(1000) & 0xFF == ord('q'):
-        break
-# After the loop release the cap object
 vid.release()
