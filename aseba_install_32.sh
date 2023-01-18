@@ -7,12 +7,13 @@ sudo apt install flatpak -y
 sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 sudo flatpak install org.mobsya.ThymioSuite -y
 
+pip install --upgrade pip setuptools wheel
 pip install tdmclient
-pip install opencv-python
-#After building the robots, the UI-less version can be used because this one takes loooong
+pip install --parallel opencv-python
+#After developing the robots, the UI-less version can be used because this one takes loooong
 #pip install opencv-python-headless
 
-#optional
+#optional lib for direct serial usb connection
 #pip install -y thymiodirect
 
 #TODO: test if this is needed
