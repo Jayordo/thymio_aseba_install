@@ -1,4 +1,4 @@
-# How to:
+# How to
 
 ## On your desktop
 1. Download raspberry pi imager from: https://www.raspberrypi.com/software/
@@ -9,16 +9,21 @@
 6. Press write, wait for it to finish and stick it in the raspberry.
 7. Find the Pi's ipadress, and ssh to it.
 
-## On the pi
-Run the following lines:
+## On the Pi
+1. Run the following lines:
 ```sh
 cd ~/Documents
 git clone https://github.com/Jayordo/thymio_aseba_install
 cd thymio_aseba_install
 . aseba_install_32.sh
 ```
-Once it's done you can test if it's working by running:
+2. Make a cup of coffee, because opencv is gonna take a while.
+3. Once it's done you can test if it's working by running:
 ```sh
 flatpak run --command=thymio-device-manager org.mobsya.ThymioSuite
 python3 -m tdmclient list
+```
+4. reboot the Pi
+```sh
+sudo reboot
 ```
