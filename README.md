@@ -1,6 +1,6 @@
-## How to:
+# How to:
 
-# On your desktop
+## On your desktop
 1. Download raspberry pi imager from: https://www.raspberrypi.com/software/
 2. Insert sd in PC and run Raspberry Pi Imager
 3. Choose default Raspberry pi os (32-bit). In my current case it's Debian Bullseye with desktop from 2022-09-22.
@@ -9,8 +9,16 @@
 6. Press write, wait for it to finish and stick it in the raspberry.
 7. Find the Pi's ipadress, and ssh to it.
 
-# On the pi
+## On the pi
 Run the following lines:
+```sh
 cd ~/Documents
 git clone https://github.com/Jayordo/thymio_aseba_install
 cd thymio_aseba_install
+. aseba_install_32.sh
+```
+Once it's done you can test if it's working by running:
+```sh
+flatpak run --command=thymio-device-manager org.mobsya.ThymioSuite
+python3 -m tdmclient list
+```
