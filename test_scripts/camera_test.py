@@ -19,6 +19,7 @@ while True:
         cv2.imwrite('/tmp/frame.png', frame)
         output = climage.convert('/tmp/frame.png', is_truecolor=False, width=150, palette="linuxconsole")
         print(output)
+        #depending on machine not requiredq
         time.sleep(0.2)
 
 vid.release()
