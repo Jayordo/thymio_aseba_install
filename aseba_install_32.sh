@@ -2,6 +2,7 @@
 
 sudo apt install xrdp -y
 sudo apt install flatpak -y
+sudo apt install python3-opencv -y
 sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 sudo flatpak install org.mobsya.ThymioSuite -y
 #requirements for opencv?
@@ -14,7 +15,8 @@ sudo pip3 install tdmclient
 
 #TODO: test if above reqs make the -i command unnecessary
 #the link extracts a pre-built wheel which improves install speed massively
-sudo pip3 install numpy --extra-index-url https://www.piwheels.org/simple
+
+#sudo pip3 install opencv-python
 
 #After developing the robots, the UI-less version can be used because this one takes loooong
 #sudo pip3 install opencv-python-headless
