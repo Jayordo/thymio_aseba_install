@@ -1,3 +1,7 @@
+#python3 -m tdmclient run blink.py
+#python3 -m tdmclient run --stop
+#if this doesnt work update the firmware of the Thymio
+
 on = False
 
 timer_period[0] = 500

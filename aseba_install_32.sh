@@ -18,7 +18,7 @@ sudo pip3 install -U numpy
 #optional lib for direct serial usb connection
 #sudo pip3 install -y thymiodirect
 
-#Test if its working, it might need a reboot
+#Test if its working
 #flatpak run --command=thymio-device-manager org.mobsya.ThymioSuite
 #python -m tdmclient list
 
