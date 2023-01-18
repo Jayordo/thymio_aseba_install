@@ -10,9 +10,10 @@ while True:
 
     # Display the resulting frame
     cv2.imwrite('/tmp/frame.png', frame)
-    output = climage.convert('/tmp/frame.png')
+    output = climage.convert('/tmp/frame.png', is_truecolor=False, width=150 ,palette="linuxconsole")
     print(output)
     # the 'q' button is set as the quitting button you may use any desired button of your choice
+    #this only works on cv2 show windows
     if cv2.waitKey(1000) & 0xFF == ord('q'):
         break
 # After the loop release the cap object
