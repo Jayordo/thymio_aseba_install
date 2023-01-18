@@ -10,17 +10,17 @@ sudo flatpak install org.mobsya.ThymioSuite -y
 sudo apt update --fix-missing
 sudo apt full-upgrade
 
-pip3 install tdmclient
+sudo pip3 install tdmclient
 
 #TODO: test if above reqs make the -i command unnecessary
 #the link extracts a pre-built wheel which improves install speed massively
-pip3 install opencv-python -i https://www.piwheels.org/simple
+sudo pip3 install numpy --extra-index-url https://www.piwheels.org/simple
 
 #After developing the robots, the UI-less version can be used because this one takes loooong
-#pip3 install opencv-python-headless
+#sudo pip3 install opencv-python-headless
 
 #optional lib for direct serial usb connection
-#pip3 install -y thymiodirect
+#sudo pip3 install -y thymiodirect
 
 #TODO: test if this is needed
 #echo -e 'SUBSYSTEM=="usb", ATTRS{idVendor}=="0617", ATTRS{idProduct}=="000a", MODE="0666"\nSUBSYSTEM=="usb", ATTRS{idVendor}=="0617", ATTRS{idProduct}=="000c", MODE="0666"' | sudo tee /etc/udev/rules.d/99-mobsya.rules
