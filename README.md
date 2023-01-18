@@ -17,7 +17,7 @@ git clone https://github.com/Jayordo/thymio_aseba_install
 cd thymio_aseba_install
 . aseba_install_32.sh
 ```
-2. Make a cup of coffee, because opencv is gonna take a while.
+2. Make a cup of coffee, because it is gonna take a while.
 3. Once it's done you can test if it's working by running:
 ```sh
 flatpak run --command=thymio-device-manager org.mobsya.ThymioSuite
