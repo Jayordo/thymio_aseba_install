@@ -29,7 +29,7 @@ with ClientAsync() as client:
             while True:
                 for colour in node.v.leds.top:
                     colour = random.randint(0,32)
-                print(node.v.leds.top)
+                print(list(node.v.leds.top))
                 node.flush()
                 await client.sleep(0.01)
             # await node.set_variables(change_top(0, 0, 32))
