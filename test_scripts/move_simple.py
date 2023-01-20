@@ -1,5 +1,5 @@
 from tdmclient import ClientAsync
-
+import random
 
 def motors(left, right):
     return {
@@ -27,22 +27,8 @@ with ClientAsync() as client:
         with await client.lock() as node:
             await node.wait_for_variables({"leds.top"})
             while True:
-                current_color = node.v.leds.top
-                if current_color[2] >= 32:
-                    current_color[2] = 0
-                    current_color[1] += 1
-                    if current_color[1] >= 32:
-                        current_color[1] = 0
-                        current_color[0] += 1
-                        if current_color[0] >= 32:
-                            current_color = [0, 0, 0]
-                        else:
-                            current_color[0] += 1
-                    else:
-                        current_color[1] += 1
-                else:
-                    current_color[2] += 1
-                # node.v.leds.top = current_color
+                for colour in node.v.leds.top:
+                    colour = random.randint(0,32)
                 node.flush()
                 await client.sleep(0.01)
             # await node.set_variables(change_top(0, 0, 32))
