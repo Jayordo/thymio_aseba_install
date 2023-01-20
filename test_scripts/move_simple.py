@@ -9,7 +9,7 @@ def motors(left, right):
 
 
 def change_top(r, g, b):
-    return {f"leds.top = [{r},{g},{b}]"}
+    return {f"leds.top": [r,g,b]}
 
 
 with ClientAsync() as client:
