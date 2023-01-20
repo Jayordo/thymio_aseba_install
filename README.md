@@ -17,13 +17,11 @@ git clone https://github.com/Jayordo/thymio_aseba_install
 cd thymio_aseba_install
 . aseba_install_32.sh
 ```
-2. Make a cup of coffee, because it is gonna take a while.
-3. Once it's done you can test if it's working by running:
+2. Once it's done you can test if it's working by running:
 ```sh
 flatpak run --command=thymio-device-manager org.mobsya.ThymioSuite
 python3 -m tdmclient list
 ```
-4. reboot the Pi
-```sh
-sudo reboot
-```
+You should see the info of your Thymio, you might need to reconnect the usb cable for it to work.
+4. To test the main functions run the test_scripts, if blink.py doesn't work the Thymio might need a firmware update. 
+Which can be done through the Thymio suite app(which possibly requires X, so you might need to rdp to it)
