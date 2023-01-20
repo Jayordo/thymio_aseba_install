@@ -21,6 +21,9 @@ onevent timer0
     emit e2 [123, i]
     i++
 """
+        change_led = """
+leds.top = [32, 0 , 0]
+"""
 
 
         async def prog():
@@ -40,6 +43,7 @@ onevent timer0
                         error = await node.run()
                         if error is not None:
                             print(f"Error {error['error_code']}")
+
                     await client.sleep(10)
                     print("done")
 
