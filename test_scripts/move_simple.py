@@ -44,7 +44,7 @@ with ClientAsync() as client:
                     current_color[2] += 1
                 # node.v.leds.top = current_color
                 node.flush()
-                await client.sleep(0.1)
+                await client.sleep(0.01)
             # await node.set_variables(change_top(0, 0, 32))
             # await client.sleep(2)
             # await node.set_variables(change_top(32, 0, 0))
