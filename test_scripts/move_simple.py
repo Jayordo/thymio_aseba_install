@@ -27,8 +27,8 @@ with ClientAsync() as client:
         with await client.lock() as node:
             await node.wait_for_variables({"leds.top"})
             while True:
-                for colour in node.v.leds.top:
-                    colour = random.randint(0,32)
+                for i in [0,1,2]:
+                    node.v.leds.top[i] = random.randint(0,32)
                 print(list(node.v.leds.top))
                 node.flush()
                 await client.sleep(0.01)
