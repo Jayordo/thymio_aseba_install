@@ -1,0 +1,47 @@
+thymio class(node):
+    inits:
+        id
+        colour?
+        working_memory(logs/status)
+        memory
+        age
+        hunger_level
+        health
+
+    low level functions(can be moved to utils or something):
+        movement:
+            set_motors:
+                test motor speed range/timing
+            spin_around
+            stop
+        communicate:
+            send_ir & receive_ir
+            test range & package size
+        make_memory:
+            convert_image:
+                what cv_method
+                what output format
+                camera:
+                    Speed(how many fps does this thing handle)
+            representation_vector
+            vocabulary
+        eating/stockpile interactions
+        make_sound
+
+    high level functions:
+        go_to/follow?:
+            floor markers
+        attract_other
+        explore
+        play_language_game
+        gather_food
+
+
+pre_loop:
+    lock node
+    initialise thymio
+main_loop:
+    eat when hungry
+    gather_food when stockpile low/when instructed?
+    explore:
+        if new object found attract_other and play_language_game

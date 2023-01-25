@@ -10,6 +10,9 @@ sudo flatpak install org.mobsya.ThymioSuite -y
 echo -e 'SUBSYSTEM=="usb", ATTRS{idVendor}=="0617", ATTRS{idProduct}=="000a", MODE="0666"\nSUBSYSTEM=="usb", ATTRS{idVendor}=="0617", ATTRS{idProduct}=="000c", MODE="0666"' | sudo tee /etc/udev/rules.d/99-mobsya.rules
 sudo udevadm control --reload-rules
 
+#sets tdm to start on boot
+echo -e 'flatpak run --command=thymio-device-manager org.mobsya.ThymioSuite &\nexit 0' | sudo tee /etc/rc.local
+
 sudo pip3 install tdmclient
 sudo pip3 install opencv-python==4.5.3.56
 #sudo pip3 install opencv-python-headless #for post dev use
