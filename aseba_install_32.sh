@@ -17,6 +17,10 @@ sudo pip3 install tdmclient
 sudo pip3 install opencv-python==4.5.3.56
 #sudo pip3 install opencv-python-headless #for post dev use
 sudo pip3 install -U numpy
+#some camera dependencies
+#sudo pip3 install matplotlib
+#sudo pip3 install climage
+
 
 #optional lib for direct serial usb connection
 #sudo pip3 install -y thymiodirect
