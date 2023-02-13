@@ -1,12 +1,27 @@
-#most basic functions of the Thymio
+# most basic functions of the Thymio
 import random
+import time
 
 
-def generate_motor_targets(left_speed, right_speed):
+def generate_motor_targets(left_speed: int, right_speed: int) -> dict:
     return {
-        "motor.left.target": [int(left_speed)],
-        "motor.right.target": [int(right_speed)],
+        "motor.left.target": [left_speed],
+        "motor.right.target": [right_speed],
     }
+
+
+def move(node, speed_left: int, speed_right: int):
+    node.send_set_variables(generate_motor_targets(speed_left, speed_right))
+
+
+def spin(node, degrees: int, speed_multiplier=1):
+    # 500,-500 at sleep 1.14 is roughly enough for a 180
+    speed = int(500 * speed_multiplier)
+    degree = 0.019 / 3
+    # if slower needs longer to reach degree
+    seconds = int((degree * degrees)*(1/speed_multiplier))
+    move(node, speed, -speed)
+    time.sleep(seconds)
 
 
 def random_nudge(speed):

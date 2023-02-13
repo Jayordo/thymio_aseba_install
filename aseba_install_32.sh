@@ -11,7 +11,7 @@ echo -e 'SUBSYSTEM=="usb", ATTRS{idVendor}=="0617", ATTRS{idProduct}=="000a", MO
 sudo udevadm control --reload-rules
 
 #sets tdm to start on boot
-echo -e 'flatpak run --command=thymio-device-manager org.mobsya.ThymioSuite &\nexit 0' | sudo tee /etc/rc.local
+echo -e 'flatpak run --command=thymio-device-manager org.mobsya.ThymioSuite \nexit 0' | sudo tee /etc/rc.local
 
 sudo pip3 install tdmclient
 sudo pip3 install opencv-python==4.5.3.56
@@ -19,6 +19,7 @@ sudo pip3 install opencv-python==4.5.3.56
 sudo pip3 install -U numpy
 #some camera dependencies
 #sudo pip3 install matplotlib
+#add some thing to enable raspi-config hardware camera support
 #sudo pip3 install climage
 
 
