@@ -1,7 +1,7 @@
 from tdmclient import ClientAsync
 import random
 import sys
-import ttools.utils as ttools
+import ttools.movement as tmo
 
 
 def avoid_objects(node, speed):
@@ -45,13 +45,13 @@ with ClientAsync() as client:
                 else:
                     left_motor_target, right_motor_target = avoid_objects(node, speed)
                 # await node.set_variables(motors(left_motor_target, right_motor_target))
-                await node.set_variables(ttools.generate_motor_targets(left_motor_target, right_motor_target))
+                await node.set_variables(tmo.generate_motor_targets(left_motor_target, right_motor_target))
                 # node.flush()
                 # TODO: test clock speed
                 await client.sleep(0.1)
                 runtime += 1
             # await node.set_variables(motors(0, 0))
-            await node.set_variables(ttools.generate_motor_targets(0, 0))
+            await node.set_variables(tmo.generate_motor_targets(0, 0))
 
 
     client.run_async_program(avoid_and_random_walk)

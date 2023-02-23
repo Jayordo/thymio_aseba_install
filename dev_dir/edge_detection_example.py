@@ -1,4 +1,4 @@
-import ttools.utils as tut
+import ttools.movement as tmo
 from tdmclient import ClientAsync
 import cv2
 from matplotlib import pyplot as plt
@@ -39,7 +39,7 @@ with ClientAsync() as client:
                 object_rec(frame)
                 await client.sleep(0.1)
                 runtime += 1
-            await node.set_variables(tut.generate_motor_targets(0, 0))
+            await node.set_variables(tmo.generate_motor_targets(0, 0))
 
 
     client.run_async_program(basic_loop)

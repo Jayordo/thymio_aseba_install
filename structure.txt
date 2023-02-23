@@ -30,7 +30,7 @@ thymio class(node):
 
     high level functions:
         go_to/follow?:
-            floor markers
+            sound
         attract_other
         explore
         play_language_game
