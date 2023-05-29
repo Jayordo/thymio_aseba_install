@@ -2,7 +2,7 @@ import ttools.utils as tut
 import ttools.movement as tmo
 import ttools.basic_behaviours as tbb
 import ttools.ir_communication as tic
-import ttools.camera as tca
+# import ttools.camera as tca
 
 
 class Thymio:
@@ -24,7 +24,7 @@ class Thymio:
         self.working_memory = []
         self.add_to_working_memory()
         self.memory = {
-            ["some_representation_vector"]: "word"
+            "some_representation_vector": "word"
         }
 
     def __str__(self):
@@ -44,6 +44,8 @@ class Thymio:
     # here live main loop functions
 
     def parse_vision(self):
+        # raw_vision = tca.take_picture()
+
         # TODO: make qr codes and implement basic vision
         raise NotImplementedError
 

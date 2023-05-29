@@ -1,7 +1,6 @@
 import ttools.movement as tmo
 from tdmclient import ClientAsync
 import cv2
-from matplotlib import pyplot as plt
 
 
 def object_rec(img):
