@@ -1,8 +1,16 @@
 import numpy as np
 
+DEFAULT_WORD_SCORE = 1
+DEFAULT_SCORE_INCREASE = 1
+DEFAULT_SCORE_DECREASE = 0
 
-class RepVec:
-    def __init__(self, initial_vector):
+
+class Token:
+    score: float
+
+    def __init__(self, label: list, initial_vector, score=DEFAULT_WORD_SCORE):
+        self.label = label  # check for size
+        self.score = score
         if type(initial_vector) == list:
             self.rep_vec = np.asarray(initial_vector)  # check for size
         elif type(initial_vector) == np.ndarray:
@@ -10,51 +18,33 @@ class RepVec:
         else:
             raise TypeError(f'initial vector not type list or np array, but of type{type(initial_vector)}')
 
-
-class ModVec:
-    def __init__(self, initial_vector):
-        if type(initial_vector) == list:
-            self.mod_vec = np.asarray(initial_vector)  # check for size
-        elif type(initial_vector) == np.ndarray:
-            self.mod_vec = initial_vector
-        else:
-            raise TypeError(f'initial vector not type list or np array, but of type{type(initial_vector)}')
-
-
-class Token:
-    def __init__(self, label: list, rep_vec: RepVec):
-        self.label = label  # check for size
-        self.rep_vec = rep_vec.rep_vec
-
     def __repr__(self):
         return f"label:{self.label} rep_vec: {self.rep_vec}"
 
+    def __lt__(self, other: "Token"):
+        return self.score < other.score
 
-class Suffix:
-    def __init__(self, label: list, mod_vec: ModVec):
-        self.label = label  # check for size
-        self.mod_vec = mod_vec.mod_vec
+    def has_same_label(self, other_token: "Token") -> bool:
+        return self.label == other_token.label
 
-    def __repr__(self):
-        return f"label:{self.label} mod_vec: {self.mod_vec}"
+    def has_same_rep_vec(self, other_token: "Token") -> bool:
+        return self.rep_vec == other_token.rep_vec
 
+    def concat_label(self, other_token: "Token") -> list:
+        return self.label + other_token.label
 
-class WordPair:
-    def __init__(self, token: Token, suffix: Suffix):
-        # here be fear of referencial mess
-        self.token = token
-        self.suffix = suffix
-        self.label = token.label + suffix.label
-        applied = token.rep_vec + suffix.mod_vec
-        clipped = np.clip(applied, 0, 1)
-        # TODO: convert to hold multiple rep_vecs
-        self.rep_vec = RepVec(clipped).rep_vec
+    def combine_rep_vec(self, other_token: "Token") -> np.ndarray:
+        # TODO: is this way of combining good, averaging is going to bias towards the centre
+        return self.rep_vec + other_token.rep_vec
 
-    def __repr__(self):
-        return f"label:{self.label} rep_vec: {self.rep_vec}"
+    def combine_score(self, other_token: "Token") -> float:
+        return (self.score + other_token.score) / 2
 
-    def has_same_label(self, other_word_pair: "WordPair") -> bool:
-        return self.label == other_word_pair.label
+    def combine_tokens(self, other_token: "Token") -> tuple[list, np.ndarray, float]:
+        return self.concat_label(other_token), self.combine_rep_vec(other_token), self.combine_score(other_token)
 
-    def has_same_rep_vec(self, other_word_pair: "WordPair") -> bool:
-        return self.rep_vec == other_word_pair.rep_vec
+    def increase_score(self):
+        self.score += DEFAULT_SCORE_INCREASE
+
+    def decrease_score(self):
+        self.score += DEFAULT_SCORE_DECREASE

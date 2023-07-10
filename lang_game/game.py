@@ -8,12 +8,12 @@ class Game:
         for i in range(amount_of_agents):
             name = f"rob{i}"
             self.robots.append(Agent(name))
-        self.image_size = 2
+        self.image_size = 200
         self.known_images = {}
-        self.generate_images(20)
+        self.generate_images(2000)
 
-    def generate_images(self, amount):
-        for i in range(20):
+    def generate_images(self, amount=2000):
+        for i in range(amount):
             image = []
             for pixel in range(self.image_size):
                 image.append(random.uniform(0, 1))
@@ -34,21 +34,21 @@ class Game:
         # print(f"\nsent image:{image}")
         agent1.role = "speaker"
         agent1.generate_rep_vec(image)
-        initial_word_pair = agent1.initial_word_pair_selection()
-        initial_word_pair_label = initial_word_pair.label
+        initial_token_pair_label = agent1.initial_token_pair_selection()
         agent1.communication_state = "sending"
 
         agent2.role = "listener"
         agent2.generate_rep_vec(image)
-        agent2.parse_received_word_pair(initial_word_pair_label)
+        agent2.parse_received_word_pair(initial_token_pair_label)
 
         if agent2.communication_state == "agreement":
-            agent1.known_word_pair_scores[initial_word_pair] += 1
+            agent1.change_token_pair_score_by_label(initial_token_pair_label, "increase")
         elif agent2.communication_state == "disagreement":
-            agent1.randomly_based_word_pair_generation()
+            agent1.disagreement_resolution(initial_token_pair_label)
             try:
-                agent1.known_word_pair_scores[initial_word_pair] -= 1
+                agent1.change_token_pair_score_by_label(initial_token_pair_label, "decrease")
             except KeyError:
+                raise KeyError("just testing if this happens otherwise remove")
                 pass
 
     def select_image_from_known(self):
