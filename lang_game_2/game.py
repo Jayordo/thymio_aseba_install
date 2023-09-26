@@ -10,7 +10,7 @@ class Game:
         self.timeout = timeout
         self.amount_of_agents = amount_of_agents
         self.arena_size = 20
-        self.close_enough = 5
+        self.close_enough = 1
         self.chain_length = 1
         self.max_sentence_length = 3
         self.current_requested_food = None
