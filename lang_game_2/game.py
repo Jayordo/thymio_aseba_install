@@ -1,66 +1,67 @@
-import copy
-
 from agent import *
-import matplotlib.pyplot as plt
-import pandas as pd
+from maze import *
 
 
 class Game:
-    def __init__(self, timeout, amount_of_agents):
+    def __init__(self, timeout, amount_of_agents, gui=False, seed=random.seed()):
+        # given
         self.timeout = timeout
         self.amount_of_agents = amount_of_agents
-        self.arena_size = 20
-        self.close_enough = 1
-        self.chain_length = 1
-        self.max_sentence_length = 3
+        self.gui = gui
+        random.seed(seed)
+        # empties
         self.current_requested_food = None
-        self.food_location = None
-        self.food_types = []
+        # statics
+        self.arena_size = 10
+        self.difficulty = 0.5
+        self.fps = 0
+        self.chain_length = 1
+        self.max_sentence_length = 10
         self.possible_roles = [
             "requester",
             "fetcher"
         ]
         self.params = dict({
             "action_types": [],
-            "reward_factor": 5,
+            "reward_factor": 3,
             "punish_factor": 1
         })
+        # startup functions
+        self.maze = Maze(self.amount_of_agents, self.arena_size, self.difficulty, self.gui)
+        self.food_types = self.set_food_types(2)
         self.prepare_params()
         self.robots = self.generate_robots()
-        self.set_food_types(1)
 
     def set_food_types(self, amount_of_food_types: int):
-        food_area = self.arena_size - 10
+        food_types = []
         for food_type in range(amount_of_food_types):
-            food_location = np.array(
-                [random.randint(-food_area, food_area), random.randint(-food_area, food_area)])
-            self.food_types.append([(food_type,), food_location])
+            name = (food_type,)
+            self.maze.add_food(name)
+            food_types.append(name)
+        return food_types
 
     def prepare_params(self):
         action_buckets = dict({
-            "move_buckets": 10,
-            "rotation_buckets": 10,
+            "move_buckets": 9,
+            "rotation_buckets": 9,
             # "speech_buckets": 10,
-            "stop_talking_buckets": 3
+            # "stop_talking_buckets": 2
         })
         for k, v in action_buckets.items():
-            self.params["action_types"].append((0, v))
+            self.params["action_types"].append((1, v + 1))
 
     def generate_robots(self):
         letter = 65
         robots = []
         for rob_id in range(self.amount_of_agents):
             name = chr(letter + rob_id)
-            robots.append(Agent(name, self.params))
+            rob = Agent(name, self.params)
+            self.maze.add_player(name)
+            robots.append(rob)
         return robots
 
     def set_new_food(self):
-        self.current_requested_food, self.food_location = random.choice(self.food_types)
-        # print(self.current_requested_food)
-        # print(self.food_location)
-
-    def is_out_of_bounds(self, rob: Agent):
-        return abs(rob.location[0]) > self.arena_size or abs(rob.location[1]) > self.arena_size
+        self.current_requested_food = random.choice(self.food_types)
 
     def assign_role(self, rob):
         if not self.listen_around(rob):
@@ -81,25 +82,23 @@ class Game:
         return None
 
     def collect_instructions(self, fetcher: Agent, requester: Agent):
+        requester.clear_instructions()
         fetcher.clear_instructions()
-        fetcher.instructions.append(requester.speaking)
-        conversation_topic = requester.parse_input(requester.speaking, perform=False)
-        timeout = self.max_sentence_length
-        while conversation_topic[0] != 2 and timeout > 0:
-            conversation_topic = requester.parse_input(conversation_topic, perform=False)
-            fetcher.instructions.append(conversation_topic)
-            timeout -= 1
+        given_sentence = requester.generate_sentence(self.current_requested_food, self.max_sentence_length)
+        fetcher.instructions = given_sentence
 
     def evaluate(self, fetcher: Agent):
-        if self.distance_to(fetcher.location, self.food_location) < self.close_enough:
-            fetcher.logs["food_found"] += 1
+        if self.maze.is_player_colliding_with_food(fetcher.name, self.current_requested_food):
             fetcher.found_food = True
-            self.set_new_food()
 
-    @staticmethod
-    def reward_or_punish_robs(fetcher: Agent, requester: Agent):
-        # reward is true
-        for instruction in fetcher.instructions:
+    def reward_or_punish_robs(self, fetcher: Agent, requester: Agent):
+        if fetcher.found_food:
+            requester.reward(self.current_requested_food)
+            fetcher.reward(fetcher.instructions[-1])
+        else:
+            requester.punish(self.current_requested_food)
+            fetcher.punish(fetcher.instructions[-1])
+        for instruction in fetcher.instructions[:-1]:
             if fetcher.found_food:
                 requester.reward(instruction)
                 fetcher.reward(instruction)
@@ -108,25 +107,46 @@ class Game:
                 fetcher.punish(instruction)
 
     def game_loop(self):
+        turns_to_skip = None
+        paused = False
         self.set_new_food()
         while self.timeout > 0:
-            if self.timeout % 10000 == 0:
-                print(self.timeout)
-            for rob in self.robots:
-                if not rob.role:
-                    self.assign_role(rob)
-                if rob.role == "requester":
-                    self.requesters_turn(rob)
-                elif rob.role == "fetcher":
-                    self.fetchers_turn(rob)
-                else:  # explorer
-                    pass
-                if self.is_out_of_bounds(rob):
-                    rob.return_home()
-            self.timeout -= 1
+            if turns_to_skip is None:
+                pass
+            elif turns_to_skip > 0:
+                turns_to_skip -= 1
+            else:
+                self.gui = True
+                turns_to_skip = None
+            if not paused:
+                # print(self.timeout)
+                for rob in self.robots:
+                    if not rob.role:
+                        self.assign_role(rob)
+                    if rob.role == "requester":
+                        self.requesters_turn(rob)
+                    elif rob.role == "fetcher":
+                        self.fetchers_turn(rob)
+                self.timeout -= 1
+            # Put all this stuff in a different function
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.timeout = -1
+                if event.type == pygame.KEYDOWN:
+                    if pygame.key.name(event.key) == "space":  # Pausing
+                        if paused:
+                            paused = False
+                        else:
+                            paused = True
+                    if pygame.key.name(event.key) == "f":
+                        turns_to_skip = 100
+                        self.gui = False
+                    print(pygame.key.name(event.key))
+            if self.gui:
+                pygame.display.set_caption(f'{self.timeout} ')
 
     def requesters_turn(self, requester: Agent):
-        requester.speaking = requester.parse_input(self.current_requested_food, perform=False)
+        requester.speaking = requester.parse_input(self.current_requested_food)
 
     def fetchers_turn(self, fetcher: Agent):
         limit = self.chain_length
@@ -135,74 +155,46 @@ class Game:
             fetcher.role = "requester"
             return
         while limit > 0 and requester and not fetcher.found_food:
-            requester = self.listen_around(fetcher)
+            fetcher.logs["interactions_had"] += 1
+            requester.logs["interactions_had"] += 1
             self.collect_instructions(fetcher, requester)
             self.execute_multiple_instructions(fetcher)
             limit -= 1
+            requester = self.listen_around(fetcher)
         self.reward_or_punish_robs(fetcher, requester)
-        fetcher.return_home()
+        if fetcher.found_food:
+            self.set_new_food()
+        fetcher.reset_and_log()
+        self.maze.return_to_spawn(fetcher.name)
         return
 
     def execute_multiple_instructions(self, rob: Agent):
-        for instruction in rob.instructions:
-            rob.parse_input(instruction)
+        rob.last_subsequent_locations.append(self.maze.get_player_copy(rob.name))
+        for instruction_id, instruction in enumerate(rob.instructions):
+            action = rob.parse_input(instruction)
+            self.execute_action(rob, *action)
+            rob.last_subsequent_locations.append(self.maze.get_player_copy(rob.name))
             self.evaluate(rob)
             if rob.found_food:
+                rob.instructions = rob.instructions[:instruction_id + 1]
                 return
 
-    def print_data(self):
-        first = True
-        for rob in self.robots:
-            logs = copy.deepcopy(rob.logs)
-            del logs["visited_locations"]
-            if first:
-                vdf = pd.DataFrame.from_dict(rob.vocab, orient='index',
-                                             columns=[f"{rob.name}_action_{rob.role}", "metrics"])
-                df2 = pd.DataFrame(vdf['metrics'].tolist(), columns=[f'{rob.name}_inertia', f'{rob.name}_mistakes'],
-                                   index=vdf.index)
-                vdf = pd.concat([vdf, df2], axis=1)
-                vdf = vdf.drop(columns=["metrics"])
-                first = False
-            else:
-                df = pd.DataFrame.from_dict(rob.vocab, orient='index',
-                                            columns=[f"{rob.name}_action_{rob.role}", "metrics"])
-                df2 = pd.DataFrame(df['metrics'].tolist(), columns=[f'{rob.name}_inertia', f'{rob.name}_mistakes'],
-                                   index=df.index)
-                df = pd.concat([df, df2], axis=1)
-                df = df.drop(columns=["metrics"])
-                vdf = vdf.join(df, how="outer")
+    def execute_action(self, rob: Agent, action_type, amount):
+        if action_type == 0:
+            radians = np.deg2rad(rob.rotation)
+            c, s = np.cos(radians), np.sin(radians)
+            for i in range(amount):
+                self.evaluate(rob)
+                if rob.found_food:
+                    return
+                self.maze.move(rob.name, c, s)
+                if self.gui:
+                    self.maze.clock.tick(self.fps)
+                    self.maze.show()
+        elif action_type == 1:
+            degrees_per_bucket = 360 / len(range(*self.params["action_types"][1]))
+            rob.rotation = (rob.rotation + (int(amount * degrees_per_bucket))) % 360
 
-        robdf = pd.DataFrame(logs, index=[self.robots[0].name])
-        for rob in self.robots[1:]:
-            tdf = pd.DataFrame(logs, index=[rob.name])
-            robdf = pd.concat([robdf, tdf], join="outer")
-        return vdf, robdf
-
-    def plot_robot_paths(self, only_last_x=None):
-        fig, ax = plt.subplots()
-        for rob in self.robots:
-            col = (np.random.random(), np.random.random(), np.random.random())
-            robot_path = rob.logs["visited_locations"]
-            unzipped = self.unzip_locations(robot_path)
-            if only_last_x:
-                x = unzipped[0][-only_last_x:]
-                y = unzipped[1][-only_last_x:]
-                ax.plot(x, y, c=col)
-            else:
-                ax.plot(*unzipped, c=col)
-        ax.plot(*self.food_location, 'rp', markersize=14)
-        plt.show()
-
-    @staticmethod
-    def unzip_locations(entries):
-        x = []
-        y = []
-        for entry in entries:
-            x.append(entry[0])
-            y.append(entry[1])
-        return x, y
-
-    @staticmethod
-    def distance_to(point1, point2):
-        return abs(np.linalg.norm(point1 - point2))
-
+    # @staticmethod
+    # def distance_to(point1, point2):
+    #     return abs(np.linalg.norm(point1 - point2))

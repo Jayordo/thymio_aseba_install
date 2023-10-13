@@ -69,7 +69,7 @@ class Thymio:
     # here live basic functions
 
     def stop_moving(self):
-        tmo.move(self.node, 0, 0)
+        tmo.move(self.node, 0, 0, )
 
     # here live in class functions
 

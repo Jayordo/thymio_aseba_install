@@ -31,4 +31,4 @@ def avoid_objects(node, speed=100, sensitivity=6):
             return
         left += readout * left_weights[i]
         right += readout * right_weights[i]
-    tmo.move(node, int(left), int(right))
+    tmo.move(node, int(left), int(right), )
