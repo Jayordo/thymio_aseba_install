@@ -16,7 +16,8 @@ class Game:
         self.difficulty = 0.5
         self.fps = 0
         self.chain_length = 1
-        self.max_sentence_length = 10
+        self.max_sentence_length = 20
+        self.amount_of_instructions_in_features = 2
         self.possible_roles = [
             "requester",
             "fetcher"
@@ -84,27 +85,29 @@ class Game:
     def collect_instructions(self, fetcher: Agent, requester: Agent):
         requester.clear_instructions()
         fetcher.clear_instructions()
-        given_sentence = requester.generate_sentence(self.current_requested_food, self.max_sentence_length)
+        env_features = self.generate_env_features(fetcher)
+        given_sentence = requester.generate_sentence(self.current_requested_food, self.max_sentence_length,
+                                                     env_features)
         fetcher.instructions = given_sentence
+        fetcher.instructions_received_from = requester.name
 
     def evaluate(self, fetcher: Agent):
         if self.maze.is_player_colliding_with_food(fetcher.name, self.current_requested_food):
             fetcher.found_food = True
 
-    def reward_or_punish_robs(self, fetcher: Agent, requester: Agent):
-        if fetcher.found_food:
-            requester.reward(self.current_requested_food)
-            fetcher.reward(fetcher.instructions[-1])
-        else:
-            requester.punish(self.current_requested_food)
-            fetcher.punish(fetcher.instructions[-1])
-        for instruction in fetcher.instructions[:-1]:
-            if fetcher.found_food:
-                requester.reward(instruction)
-                fetcher.reward(instruction)
-            else:
-                requester.punish(instruction)
-                fetcher.punish(instruction)
+    @staticmethod
+    def reward_or_punish_robs(fetcher: Agent, requester: Agent):
+        punish = False if fetcher.found_food else True
+        for i_i, r_instruction in enumerate(requester.last_subsequent_instructions):
+            r_action = requester.last_subsequent_actions[i_i]
+            requester.reward_or_punish(r_instruction, r_action, punish)
+        # for i_i, f_instruction in enumerate(fetcher.last_subsequent_instructions):
+            #maybe test if this hits everything
+            if i_i > len(fetcher.last_subsequent_instructions)-1:
+                break
+            f_instruction = fetcher.last_subsequent_instructions[i_i]
+            f_action = fetcher.last_subsequent_actions[i_i]
+            fetcher.reward_or_punish(f_instruction, f_action, punish)
 
     def game_loop(self):
         turns_to_skip = None
@@ -146,7 +149,7 @@ class Game:
                 pygame.display.set_caption(f'{self.timeout} ')
 
     def requesters_turn(self, requester: Agent):
-        requester.speaking = requester.parse_input(self.current_requested_food)
+        requester.speaking = requester.parse_input(self.current_requested_food, self.generate_env_features(requester))
 
     def fetchers_turn(self, fetcher: Agent):
         limit = self.chain_length
@@ -171,7 +174,7 @@ class Game:
     def execute_multiple_instructions(self, rob: Agent):
         rob.last_subsequent_locations.append(self.maze.get_player_copy(rob.name))
         for instruction_id, instruction in enumerate(rob.instructions):
-            action = rob.parse_input(instruction)
+            action = rob.parse_input(instruction, self.generate_env_features(rob))
             self.execute_action(rob, *action)
             rob.last_subsequent_locations.append(self.maze.get_player_copy(rob.name))
             self.evaluate(rob)
@@ -195,6 +198,25 @@ class Game:
             degrees_per_bucket = 360 / len(range(*self.params["action_types"][1]))
             rob.rotation = (rob.rotation + (int(amount * degrees_per_bucket))) % 360
 
-    # @staticmethod
-    # def distance_to(point1, point2):
-    #     return abs(np.linalg.norm(point1 - point2))
+    def generate_env_features(self, rob):
+        last_action = (-1, -1) if len(rob.last_subsequent_actions) == 0 else rob.last_subsequent_actions[-1]
+        last_instruction = (-1, -1) if len(rob.last_subsequent_instructions) == 0 else rob.last_subsequent_instructions[
+            -1]
+        features = [
+            rob.name,
+            rob.instructions_received_from,
+            last_action,
+            last_instruction
+        ]
+
+        # added_zeroes = (self.amount_of_instructions_in_features - instruction_id)*[0]
+        # floor = 0 if len(added_zeroes)==0 else instruction_id-self.amount_of_instructions_in_features
+        # # test if always puts out same length
+        # padded_instructions = added_zeroes + rob.instructions[floor:instruction_id+self.amount_of_instructions_in_features+1] + added_zeroes
+        # added_zeroes = added_zeroes[:-1]
+        # floor = 0 if len(added_zeroes) == 0 else instruction_id - self.amount_of_instructions_in_features+1
+        # padded_actions = rob.last_subsequent_actions[floor:]
+        # features = features + padded_instructions + padded_actions
+
+        # normalise features here
+        return features

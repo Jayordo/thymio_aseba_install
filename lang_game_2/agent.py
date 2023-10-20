@@ -1,14 +1,20 @@
 import random
 
+import numpy as np
+
 
 class Agent:
     def __init__(self, name: str, params: dict):
         self.params = params
         self.name = name
         self.vocab = dict()
+        # self.action_vocab = dict()
         self.speaking = None
         self.instructions = []
+        self.instructions_received_from = None
         self.last_subsequent_locations = []
+        self.last_subsequent_instructions = []
+        self.last_subsequent_env_features = []
         self.last_subsequent_actions = []
         self.possible_actions = self.generate_possible_actions()
         self.logs = dict({
@@ -30,28 +36,64 @@ class Agent:
             action_type += 1
         return possible_actions
 
-    def is_mistakes_higher_then_inertia(self, input_string):
-        inertia, mistakes = self.vocab[input_string][1]
+    def is_mistakes_higher_then_inertia(self, given_input, action):
+        inertia, mistakes = self.vocab[given_input][action][1]
         return mistakes > inertia
 
     def clear_instructions(self):
         self.instructions = []
 
-    def parse_input(self, input_string: tuple):
-        if input_string not in list(self.vocab.keys()):
-            self.make_random_map(input_string)
-        else:
-            if self.is_mistakes_higher_then_inertia(input_string):
-                self.make_random_map(input_string)
-        self.last_subsequent_actions.append(self.vocab[input_string][0])
-        return self.vocab[input_string][0]
+    def comparison_metrics(self, feature_set: list, other_feature_set: list, method="euclid"):
+        if method == "euclid":
+            converted_features = []
+            other_converted_features = []
+            for f_i, feature in enumerate(feature_set):
+                if type(feature) is not tuple:
+                    normalised_feature,other_normalised_feature = self.normalise_to_bool(feature_set[f_i],other_feature_set[f_i])
+                    converted_features.append(normalised_feature)
+                    other_converted_features.append(other_normalised_feature)
+                else:
+                    converted_features.append(feature_set[f_i])
+                    other_converted_features.append(other_feature_set[f_i])
+            return abs(np.linalg.norm(np.array(converted_features) - np.array(other_converted_features)))
 
-    def generate_sentence(self, starting_topic: tuple, timeout):
+    @staticmethod
+    def normalise_to_bool(expression, other_expression):
+        if expression == other_expression:
+            return (0, 0), (0, 0)
+        else:
+            return (0, 0), (0, 1)
+
+    def feature_compare(self, given_input: tuple, env_features: list):
+        best_metric_low = 100000
+        best_action = None
+        for action, action_data in self.vocab[given_input].items():
+            known_feature_set = action_data[0]
+            metric = self.comparison_metrics(known_feature_set, env_features, method="euclid")
+            if metric < best_metric_low:
+                best_metric_low = metric
+                best_action = action
+        return best_action
+
+    def parse_input(self, given_input: tuple, env_features: list):
+        if given_input not in list(self.vocab.keys()):
+            self.vocab[given_input] = dict()
+            self.make_random_map(given_input, env_features)
+        action = self.feature_compare(given_input, env_features)
+        if self.is_mistakes_higher_then_inertia(given_input, action):
+            self.make_random_map(given_input, env_features)
+            action = self.feature_compare(given_input, env_features)
+        self.last_subsequent_env_features.append(env_features)
+        self.last_subsequent_instructions.append(given_input)
+        self.last_subsequent_actions.append(action)
+        return action
+
+    def generate_sentence(self, starting_topic: tuple, timeout, env_features):
         sentence = []
-        conversation_topic = self.parse_input(starting_topic)
+        conversation_topic = self.parse_input(starting_topic, env_features)
         sentence.append(conversation_topic)
         while conversation_topic[0] != 2 and timeout > 0:
-            conversation_topic = self.parse_input(conversation_topic)
+            conversation_topic = self.parse_input(conversation_topic, env_features)
             sentence.append(conversation_topic)
             timeout -= 1
         return sentence
@@ -61,43 +103,21 @@ class Agent:
         self.found_food = False
         self.rotation = 0
 
-    def make_random_map(self, input_string: tuple):
+    def make_random_map(self, given_input: tuple, env_features: list):
         action = random.choice(tuple(self.possible_actions))
-        self.set_mapping(input_string, action)
+        self.vocab[given_input][action] = [env_features, [0, 0]]
         return action
 
-    def set_mapping(self, input_string: tuple, action: tuple):
-        self.vocab[input_string] = [action, [0, 0]]
-
-    # def delete_map(self, input_string: tuple):
-    #     del self.vocab[input_string]
-
-    # def delete_random_worst_mapping(self):
-    #     worst_mapping_value = 10000
-    #     worst_mappings = []
-    #     for k, v in self.vocab.items():
-    #         inertia = v[1][0]
-    #         if inertia < worst_mapping_value:
-    #             worst_mapping_value = inertia
-    #             worst_mappings = [k]
-    #         elif inertia == worst_mapping_value:
-    #             worst_mappings.append(k)
-    #     mapping_to_delete = random.choice(worst_mappings)
-    #     self.delete_map(mapping_to_delete)
-
-    def reward(self, input_string):
-        if input_string not in self.vocab.keys():
-            return
-        # increase inertia
-        self.vocab[input_string][1][0] += self.params["reward_factor"]
-        # reset mistakes
-        self.vocab[input_string][1][1] = 0
-
-    def punish(self, input_string):
-        if input_string not in self.vocab.keys():
-            return
-        # increase mistakes
-        self.vocab[input_string][1][1] += self.params["punish_factor"]
+    def reward_or_punish(self, given_input,action, punish):
+        # if given_input not in self.vocab.keys():
+        #     return
+        if not punish:
+            # increase inertia
+            self.vocab[given_input][action][1][0] += self.params["reward_factor"]
+            # reset mistakes
+            self.vocab[given_input][action][1][1] = 0
+        else:
+            self.vocab[given_input][action][1][1] += self.params["punish_factor"]
 
     def write_to_logs(self):
         self.log_instruction_data()
@@ -111,6 +131,8 @@ class Agent:
                 [str(self.instructions), str(self.last_subsequent_actions), self.found_food])
             self.instructions = []
             self.last_subsequent_actions = []
+            self.last_subsequent_instructions = []
+            self.instructions_received_from = None
 
     def log_locations(self):
         self.logs["taken_paths"].append(self.last_subsequent_locations)
