@@ -1,5 +1,7 @@
 import pygame
 from maze_generation import *
+import math
+from agent import *
 
 
 class Maze:
@@ -14,6 +16,9 @@ class Maze:
             "blocks": dict(),
             "players": dict(),
             "food": dict(),
+        }
+        self.line_entities = {
+            "player_rays": dict()
         }
         # initial functions
         mg = MazeGenerator(self.amount_of_blocks, self.amount_of_blocks, difficulty)
@@ -31,6 +36,7 @@ class Maze:
         self.player_size = self.unit_size / 4
         self.food_size = self.unit_size / 2
         self.convert_template_to_blocks()
+        self.player_angles = dict()
 
     def select_random_empty_cell(self):
         while True:
@@ -55,15 +61,18 @@ class Maze:
 
     def add_food(self, name):
         x, y = self.select_random_empty_cell()
-        self.entities["food"][name] = [self.generate_random_colour(),
-                                       pygame.Rect((self.unit_size * x, self.unit_size * y,
-                                                    self.food_size, self.food_size))]
+        while pygame.math.Vector2(x, y).distance_to(self.player_starting_pos) < 5:
+            x, y = self.select_random_empty_cell()
+        food_object = pygame.Rect((self.unit_size * x, self.unit_size * y, self.food_size, self.food_size))
+        self.entities["food"][name] = [self.generate_random_colour(), food_object]
 
     def add_player(self, name):
-        self.entities["players"][name] = [self.generate_random_colour(),
-                                          pygame.Rect((self.unit_size * self.player_starting_pos[0],
-                                                       self.unit_size * self.player_starting_pos[1],
-                                                       self.player_size, self.player_size))]
+        col = self.generate_random_colour()
+        player = pygame.Rect((
+            self.unit_size * self.player_starting_pos[0], self.unit_size * self.player_starting_pos[1],
+            self.player_size, self.player_size))
+        self.entities["players"][name] = [col, player]
+        self.line_entities["player_rays"][name] = [col, player.center, self.calculate_endpoint(player, [0, 0])]
 
     def convert_template_to_blocks(self):
         for y, line in enumerate(self.template):
@@ -102,6 +111,28 @@ class Maze:
         self.check_collision(player, x_vel, True)
         player.y += y_vel * self.player_size
         self.check_collision(player, y_vel, False)
+        self.line_entities["player_rays"][player_name][1] = player.center
+        self.line_entities["player_rays"][player_name][2] = self.calculate_endpoint(player, [x_vel, y_vel])
+        self.calculate_distance_to_forward_block(player_name)
+
+    def calculate_distance_to_forward_block(self, player_name):
+        closest_block_distance = 100000000
+        for _, block in self.entities["blocks"].values():
+            _, start_pos, end_pos = self.line_entities["player_rays"][player_name]
+            clipped_line = block.clipline(start_pos, end_pos)
+            if clipped_line:
+                distance = pygame.math.Vector2(start_pos).distance_to(clipped_line[0])
+                if distance < closest_block_distance:
+                    closest_block_distance = distance
+                    self.line_entities["player_rays"][player_name][2] = clipped_line[0]
+        return closest_block_distance
+
+    @staticmethod
+    def calculate_endpoint(player, rotation):
+        x, y = rotation
+        x = player.center[0] + x * 1000
+        y = player.center[1] + y * 1000
+        return [x, y]
 
     def return_to_spawn(self, player_name):
         player = self.entities["players"][player_name][1]
@@ -114,5 +145,8 @@ class Maze:
         for entity_type_name, entity_type in self.entities.items():
             for colour, entity in entity_type.values():
                 pygame.draw.rect(self.screen, colour, entity)
+        for entity_type_name, entity_type in self.line_entities.items():
+            for colour, start, end in entity_type.values():
+                pygame.draw.line(self.screen, colour, start, end)
         pygame.display.update()
         self.screen.fill(self.BG_COLOR)

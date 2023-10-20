@@ -1,5 +1,4 @@
 import random
-
 import numpy as np
 
 
@@ -48,7 +47,7 @@ class Agent:
             converted_features = []
             other_converted_features = []
             for f_i, feature in enumerate(feature_set):
-                if type(feature) is not tuple:
+                if type(feature) is not tuple or type(feature) is not int or type(feature) is not float:
                     normalised_feature,other_normalised_feature = self.normalise_to_bool(feature_set[f_i],other_feature_set[f_i])
                     converted_features.append(normalised_feature)
                     other_converted_features.append(other_normalised_feature)

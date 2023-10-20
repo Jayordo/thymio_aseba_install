@@ -1,3 +1,5 @@
+import pygame.display
+
 from agent import *
 from maze import *
 
@@ -144,6 +146,10 @@ class Game:
                     if pygame.key.name(event.key) == "f":
                         turns_to_skip = 100
                         self.gui = False
+                    if pygame.key.name(event.key) == "x":
+                        self.gui = False
+                        pygame.display.set_mode(flags=pygame.HIDDEN)
+                        turns_to_skip = None
                     print(pygame.key.name(event.key))
             if self.gui:
                 pygame.display.set_caption(f'{self.timeout} ')
@@ -186,6 +192,7 @@ class Game:
         if action_type == 0:
             radians = np.deg2rad(rob.rotation)
             c, s = np.cos(radians), np.sin(radians)
+
             for i in range(amount):
                 self.evaluate(rob)
                 if rob.found_food:
@@ -199,14 +206,16 @@ class Game:
             rob.rotation = (rob.rotation + (int(amount * degrees_per_bucket))) % 360
 
     def generate_env_features(self, rob):
+
         last_action = (-1, -1) if len(rob.last_subsequent_actions) == 0 else rob.last_subsequent_actions[-1]
         last_instruction = (-1, -1) if len(rob.last_subsequent_instructions) == 0 else rob.last_subsequent_instructions[
             -1]
         features = [
-            rob.name,
             rob.instructions_received_from,
             last_action,
-            last_instruction
+            last_instruction,
+            self.maze.calculate_distance_to_forward_block(rob.name)
+            #colour ray casting or percentage of vision raycasting
         ]
 
         # added_zeroes = (self.amount_of_instructions_in_features - instruction_id)*[0]
