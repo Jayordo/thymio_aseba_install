@@ -7,10 +7,10 @@ amount_of_agents = 2
 food_found = 0
 # game = Game(timeout, amount_of_agents, seed=seed, gui=True)
 # game.game_loop()
-while food_found < 0.01 * timeout:
-    timeout = 1000
+while food_found < 0.1 * timeout:
+    timeout = 10000
     seed = random.randint(0, 1000)
-    game = Game(timeout, amount_of_agents, seed=seed, gui=False)
+    game = Game(timeout, amount_of_agents, seed=seed, gui=True)
     game.game_loop()
     food_found = game.robots[1].logs["food_found"]
     print(food_found)

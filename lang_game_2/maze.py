@@ -1,7 +1,6 @@
 import pygame
 from maze_generation import *
-import math
-from agent import *
+# from agent import *
 
 
 class Maze:
@@ -9,7 +8,6 @@ class Maze:
         # given
         self.num_of_players = num_of_players
         self.arena_size = arena_size
-        self.amount_of_blocks = int(self.arena_size)
         self.gui = gui
         # empties
         self.entities = {
@@ -21,7 +19,7 @@ class Maze:
             "player_rays": dict()
         }
         # initial functions
-        mg = MazeGenerator(self.amount_of_blocks, self.amount_of_blocks, difficulty)
+        mg = MazeGenerator(self.arena_size, self.arena_size, difficulty)
         self.template = mg.template
         self.player_starting_pos = self.select_random_empty_cell()
 
@@ -36,7 +34,8 @@ class Maze:
         self.player_size = self.unit_size / 4
         self.food_size = self.unit_size / 2
         self.convert_template_to_blocks()
-        self.player_angles = dict()
+        # self.player_angles = dict()
+        self.current_requested_food = None
 
     def select_random_empty_cell(self):
         while True:
@@ -61,8 +60,9 @@ class Maze:
 
     def add_food(self, name):
         x, y = self.select_random_empty_cell()
-        while pygame.math.Vector2(x, y).distance_to(self.player_starting_pos) < 5:
+        while pygame.math.Vector2(x, y).distance_to(self.player_starting_pos) < self.arena_size/3:
             x, y = self.select_random_empty_cell()
+        self.template[y] = self.template[y][:x] + "o" + self.template[y][x + 1:]
         food_object = pygame.Rect((self.unit_size * x, self.unit_size * y, self.food_size, self.food_size))
         self.entities["food"][name] = [self.generate_random_colour(), food_object]
 
@@ -88,7 +88,7 @@ class Maze:
         return player.colliderect(food)
 
     def get_player_copy(self, player_name):
-        self.entities["players"][player_name][1].copy()
+        return self.entities["players"][player_name][1].copy()
 
     def check_collision(self, player, velocity, x_direction: bool):
         for _, block in self.entities["blocks"].values():
@@ -103,17 +103,21 @@ class Maze:
                         player.top = block.bottom
                     elif velocity > 0:
                         player.bottom = block.top
-                return
+                return True
+        return False
 
     def move(self, player_name, x_vel, y_vel):
         player = self.entities["players"][player_name][1]
         player.x += x_vel * self.player_size
-        self.check_collision(player, x_vel, True)
+        collided_x = self.check_collision(player, x_vel, True)
         player.y += y_vel * self.player_size
-        self.check_collision(player, y_vel, False)
+        collided_y = self.check_collision(player, y_vel, False)
         self.line_entities["player_rays"][player_name][1] = player.center
         self.line_entities["player_rays"][player_name][2] = self.calculate_endpoint(player, [x_vel, y_vel])
         self.calculate_distance_to_forward_block(player_name)
+        if collided_x or collided_y:
+            return True
+        return False
 
     def calculate_distance_to_forward_block(self, player_name):
         closest_block_distance = 100000000
@@ -125,11 +129,13 @@ class Maze:
                 if distance < closest_block_distance:
                     closest_block_distance = distance
                     self.line_entities["player_rays"][player_name][2] = clipped_line[0]
-        return closest_block_distance
+        return closest_block_distance/self.unit_size
 
     @staticmethod
     def calculate_endpoint(player, rotation):
         x, y = rotation
+        if x + y == 0:
+            x=y=1
         x = player.center[0] + x * 1000
         y = player.center[1] + y * 1000
         return [x, y]
@@ -138,15 +144,24 @@ class Maze:
         player = self.entities["players"][player_name][1]
         player.x = self.player_starting_pos[0] * self.unit_size
         player.y = self.player_starting_pos[1] * self.unit_size
+        self.line_entities["player_rays"][player_name][1]= player.center
+        self.line_entities["player_rays"][player_name][2]= self.calculate_endpoint(player, [0, 0])
+
+    def outline_current_food(self):
+        current_food = self.entities["food"][self.current_requested_food][1]
+        food_outline = pygame.Rect((current_food.x-2, current_food.y-2, self.food_size+4, self.food_size+4))
+        pygame.draw.rect(self.screen, (255, 255, 255), food_outline)
 
     def show(self):
         if not self.gui:
             return
+        self.outline_current_food()
         for entity_type_name, entity_type in self.entities.items():
             for colour, entity in entity_type.values():
                 pygame.draw.rect(self.screen, colour, entity)
         for entity_type_name, entity_type in self.line_entities.items():
             for colour, start, end in entity_type.values():
                 pygame.draw.line(self.screen, colour, start, end)
+
         pygame.display.update()
         self.screen.fill(self.BG_COLOR)

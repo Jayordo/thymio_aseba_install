@@ -47,13 +47,11 @@ class Agent:
             converted_features = []
             other_converted_features = []
             for f_i, feature in enumerate(feature_set):
-                if type(feature) is not tuple or type(feature) is not int or type(feature) is not float:
-                    normalised_feature,other_normalised_feature = self.normalise_to_bool(feature_set[f_i],other_feature_set[f_i])
-                    converted_features.append(normalised_feature)
-                    other_converted_features.append(other_normalised_feature)
-                else:
-                    converted_features.append(feature_set[f_i])
-                    other_converted_features.append(other_feature_set[f_i])
+                if not feature or not other_feature_set[f_i]:
+                    continue
+                converted_features.append(feature_set[f_i])
+                other_converted_features.append(other_feature_set[f_i])
+            # return np.average(abs(np.array(converted_features)-np.array(other_converted_features)))
             return abs(np.linalg.norm(np.array(converted_features) - np.array(other_converted_features)))
 
     @staticmethod
@@ -64,7 +62,7 @@ class Agent:
             return (0, 0), (0, 1)
 
     def feature_compare(self, given_input: tuple, env_features: list):
-        best_metric_low = 100000
+        best_metric_low = 10000000000000000
         best_action = None
         for action, action_data in self.vocab[given_input].items():
             known_feature_set = action_data[0]
@@ -79,9 +77,10 @@ class Agent:
             self.vocab[given_input] = dict()
             self.make_random_map(given_input, env_features)
         action = self.feature_compare(given_input, env_features)
+        if not action:
+            action = self.make_random_map(given_input, env_features)
         if self.is_mistakes_higher_then_inertia(given_input, action):
-            self.make_random_map(given_input, env_features)
-            action = self.feature_compare(given_input, env_features)
+            action = self.make_random_map(given_input, env_features)
         self.last_subsequent_env_features.append(env_features)
         self.last_subsequent_instructions.append(given_input)
         self.last_subsequent_actions.append(action)
@@ -91,7 +90,7 @@ class Agent:
         sentence = []
         conversation_topic = self.parse_input(starting_topic, env_features)
         sentence.append(conversation_topic)
-        while conversation_topic[0] != 2 and timeout > 0:
+        while timeout > 0:
             conversation_topic = self.parse_input(conversation_topic, env_features)
             sentence.append(conversation_topic)
             timeout -= 1
@@ -131,6 +130,7 @@ class Agent:
             self.instructions = []
             self.last_subsequent_actions = []
             self.last_subsequent_instructions = []
+            self.last_subsequent_env_features = []
             self.instructions_received_from = None
 
     def log_locations(self):

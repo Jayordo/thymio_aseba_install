@@ -1,5 +1,4 @@
 import pygame.display
-
 from agent import *
 from maze import *
 
@@ -13,8 +12,10 @@ class Game:
         random.seed(seed)
         # empties
         self.current_requested_food = None
+        self.action_buckets = None
+        self.last_hundred_results = []
         # statics
-        self.arena_size = 10
+        self.arena_size = 8
         self.difficulty = 0.5
         self.fps = 0
         self.chain_length = 1
@@ -26,7 +27,7 @@ class Game:
         ]
         self.params = dict({
             "action_types": [],
-            "reward_factor": 3,
+            "reward_factor": 20,
             "punish_factor": 1
         })
         # startup functions
@@ -38,19 +39,20 @@ class Game:
     def set_food_types(self, amount_of_food_types: int):
         food_types = []
         for food_type in range(amount_of_food_types):
-            name = (food_type,)
+            name = (-1,food_type)
             self.maze.add_food(name)
             food_types.append(name)
         return food_types
 
     def prepare_params(self):
-        action_buckets = dict({
+        self.action_buckets = dict({
             "move_buckets": 9,
             "rotation_buckets": 9,
+            "nothing_buckets": 5,
             # "speech_buckets": 10,
             # "stop_talking_buckets": 2
         })
-        for k, v in action_buckets.items():
+        for k, v in self.action_buckets.items():
             self.params["action_types"].append((1, v + 1))
 
     def generate_robots(self):
@@ -65,6 +67,7 @@ class Game:
 
     def set_new_food(self):
         self.current_requested_food = random.choice(self.food_types)
+        self.maze.current_requested_food = self.current_requested_food
 
     def assign_role(self, rob):
         if not self.listen_around(rob):
@@ -114,6 +117,7 @@ class Game:
     def game_loop(self):
         turns_to_skip = None
         paused = False
+
         self.set_new_food()
         while self.timeout > 0:
             if turns_to_skip is None:
@@ -134,6 +138,8 @@ class Game:
                         self.fetchers_turn(rob)
                 self.timeout -= 1
             # Put all this stuff in a different function
+            if len(self.last_hundred_results) > 100:
+                self.last_hundred_results = self.last_hundred_results[1:]
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.timeout = -1
@@ -146,13 +152,17 @@ class Game:
                     if pygame.key.name(event.key) == "f":
                         turns_to_skip = 100
                         self.gui = False
+                    if pygame.key.name(event.key) == "g":
+                        turns_to_skip = 1000
+                        self.gui = False
                     if pygame.key.name(event.key) == "x":
                         self.gui = False
                         pygame.display.set_mode(flags=pygame.HIDDEN)
                         turns_to_skip = None
                     print(pygame.key.name(event.key))
             if self.gui:
-                pygame.display.set_caption(f'{self.timeout} ')
+
+                pygame.display.set_caption(f'{self.timeout} {rob.logs["food_found"]} {sum(self.last_hundred_results)}%')
 
     def requesters_turn(self, requester: Agent):
         requester.speaking = requester.parse_input(self.current_requested_food, self.generate_env_features(requester))
@@ -173,6 +183,9 @@ class Game:
         self.reward_or_punish_robs(fetcher, requester)
         if fetcher.found_food:
             self.set_new_food()
+            self.last_hundred_results.append(1)
+        else:
+            self.last_hundred_results.append(0)
         fetcher.reset_and_log()
         self.maze.return_to_spawn(fetcher.name)
         return
@@ -204,19 +217,23 @@ class Game:
         elif action_type == 1:
             degrees_per_bucket = 360 / len(range(*self.params["action_types"][1]))
             rob.rotation = (rob.rotation + (int(amount * degrees_per_bucket))) % 360
+        elif action_type == 2:
+            return
 
     def generate_env_features(self, rob):
 
-        last_action = (-1, -1) if len(rob.last_subsequent_actions) == 0 else rob.last_subsequent_actions[-1]
-        last_instruction = (-1, -1) if len(rob.last_subsequent_instructions) == 0 else rob.last_subsequent_instructions[
-            -1]
+        last_action = (-1,-1) if len(rob.last_subsequent_actions) == 0 else rob.last_subsequent_actions[-1]
+        last_instruction = (-1,-1) if len(rob.last_subsequent_instructions) == 0 else rob.last_subsequent_instructions[-1]
         features = [
-            rob.instructions_received_from,
-            last_action,
-            last_instruction,
-            self.maze.calculate_distance_to_forward_block(rob.name)
+            # rob.instructions_received_from,
+            self.maze.calculate_distance_to_forward_block(rob.name),
+            rob.rotation,
             #colour ray casting or percentage of vision raycasting
         ]
+        to_be_unzipped = last_action,last_instruction
+        for zipped_feature in to_be_unzipped:
+            for feature in zipped_feature:
+                features.append(feature)
 
         # added_zeroes = (self.amount_of_instructions_in_features - instruction_id)*[0]
         # floor = 0 if len(added_zeroes)==0 else instruction_id-self.amount_of_instructions_in_features
@@ -229,3 +246,4 @@ class Game:
 
         # normalise features here
         return features
+
