@@ -1,6 +1,7 @@
-import pygame
-from maze_generation import *
-# from agent import *
+from maze_generation import MazeGenerator
+from game import random
+from game import np
+from game import pygame
 
 
 class Maze:
@@ -43,6 +44,7 @@ class Maze:
             row = self.template[row_i]
             cell_i = random.randint(0, len(row) - 1)
             if row[cell_i] == "=":
+                print(cell_i, row_i)
                 return cell_i, row_i
 
     @staticmethod
@@ -54,6 +56,7 @@ class Maze:
             return None, 64
         height = pygame.display.Info().current_h * 0.9
         unit_size = int(height / self.arena_size)
+        pygame.display.quit()
         screen = pygame.display.set_mode((unit_size * self.arena_size, unit_size * self.arena_size),
                                          flags=pygame.SCALED)
         return screen, unit_size

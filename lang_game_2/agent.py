@@ -1,5 +1,5 @@
-import random
-import numpy as np
+from game import random
+from game import np
 
 
 class Agent:

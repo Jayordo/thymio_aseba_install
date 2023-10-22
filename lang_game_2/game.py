@@ -1,15 +1,18 @@
-import pygame.display
-from agent import *
-from maze import *
+import numpy as np
+import random
+import pygame
+from agent import Agent
+from maze import Maze
 
 
 class Game:
-    def __init__(self, timeout, amount_of_agents, gui=False, seed=random.seed()):
+    def __init__(self, timeout, amount_of_agents,seed, gui=False):
         # given
+        random.seed(seed)
+        np.random.seed(seed)
         self.timeout = timeout
         self.amount_of_agents = amount_of_agents
         self.gui = gui
-        random.seed(seed)
         # empties
         self.current_requested_food = None
         self.action_buckets = None
