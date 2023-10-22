@@ -74,7 +74,7 @@ class MazeGenerator:
         if difficulty > 0:
             for row_i, row in enumerate(self.grid):
                 for col_i, cell in enumerate(row):
-                    if self.check_if_not_on_edges(row_i,col_i):
+                    if self.check_if_not_on_edges(row_i, col_i):
                         if not cell:
                             if random.random() > difficulty:
                                 self.grid[row_i][col_i] = True

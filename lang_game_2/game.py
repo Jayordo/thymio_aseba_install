@@ -6,7 +6,7 @@ from maze import Maze
 
 
 class Game:
-    def __init__(self, timeout, amount_of_agents,seed, gui=False):
+    def __init__(self, timeout, amount_of_agents, seed, gui=False):
         # given
         random.seed(seed)
         np.random.seed(seed)
@@ -42,7 +42,7 @@ class Game:
     def set_food_types(self, amount_of_food_types: int):
         food_types = []
         for food_type in range(amount_of_food_types):
-            name = (-1,food_type)
+            name = (-1, food_type)
             self.maze.add_food(name)
             food_types.append(name)
         return food_types
@@ -55,6 +55,7 @@ class Game:
             # "speech_buckets": 10,
             # "stop_talking_buckets": 2
         })
+        # This should maybe be changed to include 0 again replacing the nothing buckets
         for k, v in self.action_buckets.items():
             self.params["action_types"].append((1, v + 1))
 
@@ -73,6 +74,7 @@ class Game:
         self.maze.current_requested_food = self.current_requested_food
 
     def assign_role(self, rob):
+        # this and listen around probably need a rework
         if not self.listen_around(rob):
             rob.role = "requester"
         else:
@@ -91,7 +93,8 @@ class Game:
         return None
 
     def collect_instructions(self, fetcher: Agent, requester: Agent):
-        requester.clear_instructions()
+        # whut see where requester should clear instructions
+        # requester.clear_instructions()
         fetcher.clear_instructions()
         env_features = self.generate_env_features(fetcher)
         given_sentence = requester.generate_sentence(self.current_requested_food, self.max_sentence_length,
@@ -109,9 +112,8 @@ class Game:
         for i_i, r_instruction in enumerate(requester.last_subsequent_instructions):
             r_action = requester.last_subsequent_actions[i_i]
             requester.reward_or_punish(r_instruction, r_action, punish)
-        # for i_i, f_instruction in enumerate(fetcher.last_subsequent_instructions):
-            #maybe test if this hits everything
-            if i_i > len(fetcher.last_subsequent_instructions)-1:
+            # maybe test if this hits everything
+            if i_i > len(fetcher.last_subsequent_instructions) - 1:
                 break
             f_instruction = fetcher.last_subsequent_instructions[i_i]
             f_action = fetcher.last_subsequent_actions[i_i]
@@ -120,7 +122,6 @@ class Game:
     def game_loop(self):
         turns_to_skip = None
         paused = False
-
         self.set_new_food()
         while self.timeout > 0:
             if turns_to_skip is None:
@@ -131,7 +132,6 @@ class Game:
                 self.gui = True
                 turns_to_skip = None
             if not paused:
-                # print(self.timeout)
                 for rob in self.robots:
                     if not rob.role:
                         self.assign_role(rob)
@@ -140,7 +140,7 @@ class Game:
                     elif rob.role == "fetcher":
                         self.fetchers_turn(rob)
                 self.timeout -= 1
-            # Put all this stuff in a different function
+            # Put all this stuff in different functions
             if len(self.last_hundred_results) > 100:
                 self.last_hundred_results = self.last_hundred_results[1:]
             for event in pygame.event.get():
@@ -164,10 +164,10 @@ class Game:
                         turns_to_skip = None
                     print(pygame.key.name(event.key))
             if self.gui:
-
                 pygame.display.set_caption(f'{self.timeout} {rob.logs["food_found"]} {sum(self.last_hundred_results)}%')
 
     def requesters_turn(self, requester: Agent):
+        # maybe put generate sentence here, or remove this function all together for a boolean on speaking
         requester.speaking = requester.parse_input(self.current_requested_food, self.generate_env_features(requester))
 
     def fetchers_turn(self, fetcher: Agent):
@@ -208,7 +208,6 @@ class Game:
         if action_type == 0:
             radians = np.deg2rad(rob.rotation)
             c, s = np.cos(radians), np.sin(radians)
-
             for i in range(amount):
                 self.evaluate(rob)
                 if rob.found_food:
@@ -224,16 +223,16 @@ class Game:
             return
 
     def generate_env_features(self, rob):
-
-        last_action = (-1,-1) if len(rob.last_subsequent_actions) == 0 else rob.last_subsequent_actions[-1]
-        last_instruction = (-1,-1) if len(rob.last_subsequent_instructions) == 0 else rob.last_subsequent_instructions[-1]
+        last_action = (-1, -1) if len(rob.last_subsequent_actions) == 0 else rob.last_subsequent_actions[-1]
+        last_instruction = (-1, -1) if len(rob.last_subsequent_instructions) == 0 else rob.last_subsequent_instructions[
+            -1]
         features = [
             # rob.instructions_received_from,
             self.maze.calculate_distance_to_forward_block(rob.name),
             rob.rotation,
-            #colour ray casting or percentage of vision raycasting
+            # colour ray casting or percentage of vision ray-casting
         ]
-        to_be_unzipped = last_action,last_instruction
+        to_be_unzipped = last_action, last_instruction
         for zipped_feature in to_be_unzipped:
             for feature in zipped_feature:
                 features.append(feature)
@@ -249,4 +248,3 @@ class Game:
 
         # normalise features here
         return features
-

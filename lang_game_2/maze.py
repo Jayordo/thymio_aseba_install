@@ -63,7 +63,7 @@ class Maze:
 
     def add_food(self, name):
         x, y = self.select_random_empty_cell()
-        while pygame.math.Vector2(x, y).distance_to(self.player_starting_pos) < self.arena_size/3:
+        while pygame.math.Vector2(x, y).distance_to(self.player_starting_pos) < self.arena_size / 3:
             x, y = self.select_random_empty_cell()
         self.template[y] = self.template[y][:x] + "o" + self.template[y][x + 1:]
         food_object = pygame.Rect((self.unit_size * x, self.unit_size * y, self.food_size, self.food_size))
@@ -132,13 +132,13 @@ class Maze:
                 if distance < closest_block_distance:
                     closest_block_distance = distance
                     self.line_entities["player_rays"][player_name][2] = clipped_line[0]
-        return closest_block_distance/self.unit_size
+        return closest_block_distance / self.unit_size
 
     @staticmethod
     def calculate_endpoint(player, rotation):
         x, y = rotation
         if x + y == 0:
-            x=y=1
+            x = y = 1
         x = player.center[0] + x * 1000
         y = player.center[1] + y * 1000
         return [x, y]
@@ -147,12 +147,12 @@ class Maze:
         player = self.entities["players"][player_name][1]
         player.x = self.player_starting_pos[0] * self.unit_size
         player.y = self.player_starting_pos[1] * self.unit_size
-        self.line_entities["player_rays"][player_name][1]= player.center
-        self.line_entities["player_rays"][player_name][2]= self.calculate_endpoint(player, [0, 0])
+        self.line_entities["player_rays"][player_name][1] = player.center
+        self.line_entities["player_rays"][player_name][2] = self.calculate_endpoint(player, [0, 0])
 
     def outline_current_food(self):
         current_food = self.entities["food"][self.current_requested_food][1]
-        food_outline = pygame.Rect((current_food.x-2, current_food.y-2, self.food_size+4, self.food_size+4))
+        food_outline = pygame.Rect((current_food.x - 2, current_food.y - 2, self.food_size + 4, self.food_size + 4))
         pygame.draw.rect(self.screen, (255, 255, 255), food_outline)
 
     def show(self):

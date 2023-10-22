@@ -16,7 +16,6 @@ done = False
 while food_found < 0.1 * timeout and not done:
     timeout = initial_timeout
     seed = random.randint(0, 1000)
-    # seed = 379
     game = Game(timeout, amount_of_agents, seed, gui=False)
     game.game_loop()
     food_found = game.robots[1].logs["food_found"]

@@ -7,7 +7,6 @@ class Agent:
         self.params = params
         self.name = name
         self.vocab = dict()
-        # self.action_vocab = dict()
         self.speaking = None
         self.instructions = []
         self.instructions_received_from = None
@@ -42,24 +41,16 @@ class Agent:
     def clear_instructions(self):
         self.instructions = []
 
-    def comparison_metrics(self, feature_set: list, other_feature_set: list, method="euclid"):
+    @staticmethod
+    def comparison_metrics(feature_set: list, other_feature_set: list, method="euclid"):
         if method == "euclid":
-            converted_features = []
-            other_converted_features = []
+            converted_features = other_converted_features = []
             for f_i, feature in enumerate(feature_set):
                 if not feature or not other_feature_set[f_i]:
                     continue
                 converted_features.append(feature_set[f_i])
                 other_converted_features.append(other_feature_set[f_i])
-            # return np.average(abs(np.array(converted_features)-np.array(other_converted_features)))
             return abs(np.linalg.norm(np.array(converted_features) - np.array(other_converted_features)))
-
-    @staticmethod
-    def normalise_to_bool(expression, other_expression):
-        if expression == other_expression:
-            return (0, 0), (0, 0)
-        else:
-            return (0, 0), (0, 1)
 
     def feature_compare(self, given_input: tuple, env_features: list):
         best_metric_low = 10000000000000000
@@ -106,9 +97,7 @@ class Agent:
         self.vocab[given_input][action] = [env_features, [0, 0]]
         return action
 
-    def reward_or_punish(self, given_input,action, punish):
-        # if given_input not in self.vocab.keys():
-        #     return
+    def reward_or_punish(self, given_input, action, punish):
         if not punish:
             # increase inertia
             self.vocab[given_input][action][1][0] += self.params["reward_factor"]

@@ -19,7 +19,8 @@ class GameAnalysis:
     @staticmethod
     def vocab_to_df(rob: Agent):
         rows = []
-        columns = [f"{rob.name}_input", f"{rob.name}_action",f"{rob.name}_features", f"{rob.name}_inertia", f"{rob.name}_mistakes"]
+        columns = [f"{rob.name}_input", f"{rob.name}_action", f"{rob.name}_features", f"{rob.name}_inertia",
+                   f"{rob.name}_mistakes"]
         for word, action_dict in rob.vocab.items():
             for action, action_data in action_dict.items():
                 row = [str(word), str(action), str(action_data[0]), action_data[1][0], action_data[1][1]]
