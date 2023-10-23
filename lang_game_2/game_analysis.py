@@ -12,8 +12,8 @@ class GameAnalysis:
     def print_data(self):
         rows = []
         for rob in self.game.robots:
-            rows.append([rob.name, rob.logs["food_found"], rob.logs["interactions_had"]])
-        robdf = pd.DataFrame(rows, columns=["name", "food found", "interactions had"]).set_index(["name"])
+            rows.append([rob.name, rob.logs["food_found"]])
+        robdf = pd.DataFrame(rows, columns=["name", "food found"]).set_index(["name"])
         return robdf
 
     @staticmethod

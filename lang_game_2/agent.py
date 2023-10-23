@@ -1,29 +1,36 @@
 from game import random
 from game import np
+import math
 
 
 class Agent:
     def __init__(self, name: str, params: dict):
+        # given
         self.params = params
         self.name = name
+        # inits
         self.vocab = dict()
-        self.speaking = None
-        self.instructions = []
-        self.instructions_received_from = None
-        self.last_subsequent_locations = []
+        self.role = "fetcher"
+        self.found_food = False
+        self.rotation = 0
+        self.current_chain_length = 0
+
+        # This logging stuff needs a rework
+        self.current_instructions_received_from = None
+        self.current_instructions = []
+        self.current_env_features = []
         self.last_subsequent_instructions = []
         self.last_subsequent_env_features = []
         self.last_subsequent_actions = []
-        self.possible_actions = self.generate_possible_actions()
+        self.last_subsequent_locations = []
         self.logs = dict({
             "food_found": 0,
-            "interactions_had": 0,
             "taken_paths": [],
             "given_sentences": []
         })
-        self.role = None
-        self.found_food = False
-        self.rotation = 0
+
+        # startup functions
+        self.possible_actions = self.generate_possible_actions()
 
     def generate_possible_actions(self):
         action_type = 0
@@ -34,15 +41,14 @@ class Agent:
             action_type += 1
         return possible_actions
 
-    def is_mistakes_higher_then_inertia(self, given_input, action):
+    def is_mistakes_higher_then_inertia(self, given_input: tuple, action: tuple):
         inertia, mistakes = self.vocab[given_input][action][1]
         return mistakes > inertia
 
     def clear_instructions(self):
-        self.instructions = []
+        self.current_instructions = []
 
-    @staticmethod
-    def comparison_metrics(feature_set: list, other_feature_set: list, method="euclid"):
+    def comparison_metrics(self, feature_set: list, other_feature_set: list, method="euclid"):
         if method == "euclid":
             converted_features = other_converted_features = []
             for f_i, feature in enumerate(feature_set):
@@ -50,54 +56,54 @@ class Agent:
                     continue
                 converted_features.append(feature_set[f_i])
                 other_converted_features.append(other_feature_set[f_i])
-            return abs(np.linalg.norm(np.array(converted_features) - np.array(other_converted_features)))
+            return self.distance_between_lists(converted_features, other_converted_features)
 
-    def feature_compare(self, given_input: tuple, env_features: list):
+    @staticmethod
+    def distance_between_lists(first_list:list[int], other_list:list[int]):
+        subtracted_squares = []
+        for l_i, value in enumerate(first_list):
+            subtracted_squares.append((value-other_list[l_i])**2)
+        return math.sqrt(sum(subtracted_squares))
+
+    def feature_compare(self, given_input: tuple):
         best_metric_low = 10000000000000000
         best_action = None
         for action, action_data in self.vocab[given_input].items():
             known_feature_set = action_data[0]
-            metric = self.comparison_metrics(known_feature_set, env_features, method="euclid")
+            metric = self.comparison_metrics(known_feature_set, self.current_env_features, method="euclid")
             if metric < best_metric_low:
                 best_metric_low = metric
                 best_action = action
         return best_action
 
-    def parse_input(self, given_input: tuple, env_features: list):
+    def parse_input(self, given_input: tuple):
         if given_input not in list(self.vocab.keys()):
             self.vocab[given_input] = dict()
-            self.make_random_map(given_input, env_features)
-        action = self.feature_compare(given_input, env_features)
+            self.make_random_map(given_input)
+        action = self.feature_compare(given_input)
         if not action:
-            action = self.make_random_map(given_input, env_features)
+            action = self.make_random_map(given_input)
         if self.is_mistakes_higher_then_inertia(given_input, action):
-            action = self.make_random_map(given_input, env_features)
-        self.last_subsequent_env_features.append(env_features)
+            action = self.make_random_map(given_input)
+        # improve together with logging
+        self.last_subsequent_env_features.append(self.current_env_features)
         self.last_subsequent_instructions.append(given_input)
         self.last_subsequent_actions.append(action)
         return action
 
-    def generate_sentence(self, starting_topic: tuple, timeout, env_features):
-        sentence = []
-        conversation_topic = self.parse_input(starting_topic, env_features)
-        sentence.append(conversation_topic)
-        while timeout > 0:
-            conversation_topic = self.parse_input(conversation_topic, env_features)
-            sentence.append(conversation_topic)
-            timeout -= 1
-        return sentence
-
-    def reset_and_log(self):
-        self.write_to_logs()
+    def reset_to_init(self):
         self.found_food = False
-        self.rotation = 0
+        self.current_chain_length = 0
+        self.current_instructions = []
+        self.current_env_features = []
+        self.current_instructions_received_from = None
 
-    def make_random_map(self, given_input: tuple, env_features: list):
+    def make_random_map(self, given_input: tuple):
         action = random.choice(tuple(self.possible_actions))
-        self.vocab[given_input][action] = [env_features, [0, 0]]
+        self.vocab[given_input][action] = [self.current_env_features, [0, 0]]
         return action
 
-    def reward_or_punish(self, given_input, action, punish):
+    def reward_or_punish(self, given_input: tuple, action: tuple, punish: bool):
         if not punish:
             # increase inertia
             self.vocab[given_input][action][1][0] += self.params["reward_factor"]
@@ -113,14 +119,14 @@ class Agent:
             self.logs["food_found"] += 1
 
     def log_instruction_data(self):
-        if len(self.instructions) > 0:
+        if len(self.current_instructions) > 0:
             self.logs["given_sentences"].append(
-                [str(self.instructions), str(self.last_subsequent_actions), self.found_food])
-            self.instructions = []
+                [str(self.current_instructions), str(self.last_subsequent_actions), self.found_food])
+            self.current_instructions = []
             self.last_subsequent_actions = []
             self.last_subsequent_instructions = []
             self.last_subsequent_env_features = []
-            self.instructions_received_from = None
+            self.current_instructions_received_from = None
 
     def log_locations(self):
         self.logs["taken_paths"].append(self.last_subsequent_locations)

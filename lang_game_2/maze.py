@@ -1,16 +1,19 @@
 from maze_generation import MazeGenerator
 from game import random
 from game import np
-from game import pygame
+import pygame
 
 
 class Maze:
-    def __init__(self, num_of_players, arena_size, difficulty, gui):
+    def __init__(self, num_of_players: int, arena_size: int, difficulty: float, gui: bool, fps: int):
         # given
         self.num_of_players = num_of_players
         self.arena_size = arena_size
         self.gui = gui
+        self.fps = fps
         # empties
+        self.gui_turns_to_skip = None
+        self.current_requested_food = None
         self.entities = {
             "blocks": dict(),
             "players": dict(),
@@ -35,8 +38,6 @@ class Maze:
         self.player_size = self.unit_size / 4
         self.food_size = self.unit_size / 2
         self.convert_template_to_blocks()
-        # self.player_angles = dict()
-        self.current_requested_food = None
 
     def select_random_empty_cell(self):
         while True:
@@ -44,7 +45,6 @@ class Maze:
             row = self.template[row_i]
             cell_i = random.randint(0, len(row) - 1)
             if row[cell_i] == "=":
-                print(cell_i, row_i)
                 return cell_i, row_i
 
     @staticmethod
@@ -61,7 +61,7 @@ class Maze:
                                          flags=pygame.SCALED)
         return screen, unit_size
 
-    def add_food(self, name):
+    def add_food(self, name: tuple):
         x, y = self.select_random_empty_cell()
         while pygame.math.Vector2(x, y).distance_to(self.player_starting_pos) < self.arena_size / 3:
             x, y = self.select_random_empty_cell()
@@ -69,7 +69,7 @@ class Maze:
         food_object = pygame.Rect((self.unit_size * x, self.unit_size * y, self.food_size, self.food_size))
         self.entities["food"][name] = [self.generate_random_colour(), food_object]
 
-    def add_player(self, name):
+    def add_player(self, name: str):
         col = self.generate_random_colour()
         player = pygame.Rect((
             self.unit_size * self.player_starting_pos[0], self.unit_size * self.player_starting_pos[1],
@@ -85,15 +85,15 @@ class Maze:
                     block = pygame.Rect(x * self.unit_size, y * self.unit_size, self.unit_size, self.unit_size)
                     self.entities["blocks"][name] = [self.BLOCK_COLOR, block]
 
-    def is_player_colliding_with_food(self, player_name, food_name):
+    def is_player_colliding_with_food(self, player_name: str, food_name: tuple):
         player = self.entities["players"][player_name][1]
         food = self.entities["food"][food_name][1]
         return player.colliderect(food)
 
-    def get_player_copy(self, player_name):
+    def get_player_copy(self, player_name: str):
         return self.entities["players"][player_name][1].copy()
 
-    def check_collision(self, player, velocity, x_direction: bool):
+    def check_collision(self, player: pygame.Rect, velocity: float, x_direction: bool):
         for _, block in self.entities["blocks"].values():
             if player.colliderect(block):
                 if x_direction:
@@ -109,7 +109,7 @@ class Maze:
                 return True
         return False
 
-    def move(self, player_name, x_vel, y_vel):
+    def move(self, player_name: str, x_vel: float, y_vel: float):
         player = self.entities["players"][player_name][1]
         player.x += x_vel * self.player_size
         collided_x = self.check_collision(player, x_vel, True)
@@ -118,11 +118,11 @@ class Maze:
         self.line_entities["player_rays"][player_name][1] = player.center
         self.line_entities["player_rays"][player_name][2] = self.calculate_endpoint(player, [x_vel, y_vel])
         self.calculate_distance_to_forward_block(player_name)
-        if collided_x or collided_y:
-            return True
-        return False
+        if self.gui:
+            self.clock.tick(self.fps)
+            self.show()
 
-    def calculate_distance_to_forward_block(self, player_name):
+    def calculate_distance_to_forward_block(self, player_name: str):
         closest_block_distance = 100000000
         for _, block in self.entities["blocks"].values():
             _, start_pos, end_pos = self.line_entities["player_rays"][player_name]
@@ -135,7 +135,7 @@ class Maze:
         return closest_block_distance / self.unit_size
 
     @staticmethod
-    def calculate_endpoint(player, rotation):
+    def calculate_endpoint(player: pygame.Rect, rotation: [int, int]):
         x, y = rotation
         if x + y == 0:
             x = y = 1
@@ -143,7 +143,7 @@ class Maze:
         y = player.center[1] + y * 1000
         return [x, y]
 
-    def return_to_spawn(self, player_name):
+    def return_to_spawn(self, player_name: str):
         player = self.entities["players"][player_name][1]
         player.x = self.player_starting_pos[0] * self.unit_size
         player.y = self.player_starting_pos[1] * self.unit_size
@@ -168,3 +168,42 @@ class Maze:
 
         pygame.display.update()
         self.screen.fill(self.BG_COLOR)
+
+    def gui_timer(self):
+        if self.gui_turns_to_skip is None:
+            pass
+        elif self.gui_turns_to_skip > 0:
+            self.gui_turns_to_skip -= 1
+        else:
+            self.gui = True
+            self.gui_turns_to_skip = None
+
+    def update_caption(self, elements_to_print: list):
+        if self.gui:
+            output_string = f""
+            for element in elements_to_print:
+                output_string += f"{element} "
+            output_string += "%"
+            pygame.display.set_caption(output_string)
+
+    def keypress_handler(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return True
+            if event.type == pygame.KEYDOWN:
+                if pygame.key.name(event.key) == "f":
+                    self.gui_turns_to_skip = 100
+                    self.gui = False
+                if pygame.key.name(event.key) == "g":
+                    self.gui_turns_to_skip = 1000
+                    self.gui = False
+                if pygame.key.name(event.key) == "x":
+                    self.gui = False
+                    pygame.display.set_mode(flags=pygame.HIDDEN)
+                    self.gui_turns_to_skip = None
+                print(pygame.key.name(event.key))
+        return False
+
+    @staticmethod
+    def kill_pygame():
+        pygame.quit()
