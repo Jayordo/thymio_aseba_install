@@ -3,6 +3,8 @@ import random
 # import pygame
 from agent import Agent
 from maze import Maze
+from line_profiler_pycharm import profile
+from feature import Feature
 
 
 class Game:
@@ -15,23 +17,24 @@ class Game:
         self.amount_of_agents = amount_of_agents
         self.gui = gui
         # inits
+        self.stop_command = False
         self.current_requested_food = None
         self.action_buckets = None
         self.last_hundred_results = []
         # statics
-        arena_size = 8
+        self.arena_size = 8
         difficulty = 0.5
         fps = 0
         self.max_chain_length = 1
-        self.max_sentence_length = 20
+        self.max_sentence_length = 10
         self.amount_of_instructions_in_features = 2
         self.params = dict({
             "action_types": [],
-            "reward_factor": 20,
+            "reward_factor": 10,
             "punish_factor": 1
         })
         # startup functions
-        self.maze = Maze(self.amount_of_agents, arena_size, difficulty, gui, fps)
+        self.maze = Maze(self.amount_of_agents, self.arena_size, difficulty, gui, fps)
         self.food_types = self.set_food_types(2)
         self.prepare_params()
         self.robots = self.generate_robots()
@@ -47,7 +50,7 @@ class Game:
 
     def prepare_params(self):
         self.action_buckets = dict({
-            "move_buckets": 10,
+            "movement_buckets": 10,
             "rotation_buckets": 10,
             # "speech_buckets": 10,
             # "stop_talking_buckets": 2
@@ -82,7 +85,9 @@ class Game:
                         return rob2
         return None
 
+    @profile
     def collect_instructions(self, fetcher: Agent, requester: Agent):
+        # possible eventually merge this with execute action and execute actions
         word_count = 0
         while word_count <= self.max_sentence_length:
             self.generate_env_features(requester)
@@ -96,24 +101,28 @@ class Game:
             fetcher.found_food = True
 
     @staticmethod
+    @profile
     def reward_or_punish_robs(fetcher: Agent, requester: Agent):
         punish = False if fetcher.found_food else True
+        f_instructions_index = len(fetcher.last_subsequent_instructions) - 1
         for i_i, r_instruction in enumerate(requester.last_subsequent_instructions):
             r_action = requester.last_subsequent_actions[i_i]
             requester.reward_or_punish(r_instruction, r_action, punish)
             # maybe test if this hits everything
-            if i_i > len(fetcher.last_subsequent_instructions) - 1:
+            if i_i > f_instructions_index:
                 break
             f_instruction = fetcher.last_subsequent_instructions[i_i]
             f_action = fetcher.last_subsequent_actions[i_i]
             fetcher.reward_or_punish(f_instruction, f_action, punish)
 
     def game_loop(self):
-        stop_command = self.maze.keypress_handler()
-        while self.timeout > 0 and not stop_command:
-            stop_command = self.maze.keypress_handler()
+        self.kill_command(self.maze.keypress_handler())
+        while self.timeout > 0 and not self.stop_command:
+            self.kill_command(self.maze.keypress_handler())
             self.maze.gui_timer()
             for rob in self.robots:
+                if self.stop_command:
+                    break
                 self.start_of_turn_handler(rob)
                 while rob.current_chain_length <= self.max_chain_length and not rob.found_food:
                     requester = self.listen_around(rob)
@@ -128,44 +137,48 @@ class Game:
             self.end_of_round_handler()
         self.end_of_game_handler()
 
-    def end_of_game_handler(self):
-        self.maze.kill_pygame()
+    def kill_command(self, kill: bool):
+        if kill:
+            self.stop_command = True
 
     def start_of_turn_handler(self, rob: Agent):
         rob.reset_to_init()
         self.reset_position(rob)
         rob.last_subsequent_locations.append(self.maze.get_player_copy(rob.name))
+        self.maze.update_caption([self.timeout, self.total_found_food, sum(self.last_hundred_results)])
 
     def reset_position(self, rob: Agent):
         rob.rotation = 0
         self.maze.return_to_spawn(rob.name)
 
     def end_of_round_handler(self):
-        if len(self.last_hundred_results) > 100:
-            self.last_hundred_results = self.last_hundred_results[1:]
-        self.maze.update_caption([self.timeout, self.average_found_food, sum(self.last_hundred_results)])
-        self.maze.keypress_handler()
-        self.write_round_to_logs()
-
-    def write_round_to_logs(self):
+        self.kill_command(self.maze.keypress_handler())
         for rob in self.robots:
-            rob.clear_instructions()
             rob.write_to_logs()
+            rob.clear_instructions()
             if rob.found_food:
                 self.set_new_food()
                 self.last_hundred_results.append(1)
             else:
                 self.last_hundred_results.append(0)
+        if len(self.last_hundred_results) > 100:
+            self.last_hundred_results = self.last_hundred_results[1:]
 
+    def end_of_game_handler(self):
+        self.maze.kill_pygame()
+
+    @profile
     def execute_instructions(self, rob: Agent):
         for instruction_id, instruction in enumerate(rob.current_instructions):
-            self.maze.keypress_handler()
+            self.kill_command(self.maze.keypress_handler())
+            self.generate_env_features(rob)
             action = rob.parse_input(instruction)
             self.execute_action(rob, *action)
             if rob.found_food:
                 rob.current_instructions = rob.current_instructions[:instruction_id + 1]
                 return
 
+    @profile
     def execute_action(self, rob: Agent, action_type: int, amount: int):
         if action_type == 0:
             radians = np.deg2rad(rob.rotation)
@@ -184,22 +197,28 @@ class Game:
         last_action = (-1, -1) if len(rob.last_subsequent_actions) == 0 else rob.last_subsequent_actions[-1]
         last_instruction = (-1, -1) if len(rob.last_subsequent_instructions) == 0 else rob.last_subsequent_instructions[
             -1]
+        f1 = Feature([self.maze.calculate_distance_to_forward_block(rob.name)], [float])
+        f1.normalise(0, self.arena_size)
+        f2 = Feature([rob.rotation], [int])
+        f2.normalise(0, self.action_buckets["rotation_buckets"])
+        f3 = Feature(last_action, [bool, int])
+        f3.normalise(0, self.action_buckets["movement_buckets"])
+        f4 = Feature(last_instruction, [bool, bool])
+        f5 = Feature([rob.current_instructions_received_from], [bool])
         features = [
-            # rob.current_instructions_received_from,
-            self.maze.calculate_distance_to_forward_block(rob.name),
-            rob.rotation,
+            f1,
+            f2,
+            # f3,
+            # f4,
+            # f5
             # colour ray casting or percentage of vision ray-casting
         ]
-        to_be_unzipped = last_action, last_instruction
-        for zipped_feature in to_be_unzipped:
-            for feature in zipped_feature:
-                features.append(feature)
 
         # added_zeroes = (self.amount_of_instructions_in_features - instruction_id)*[0]
         # floor = 0 if len(added_zeroes)==0 else instruction_id-self.amount_of_instructions_in_features
         # # test if always puts out same length
         # padded_instructions = added_zeroes + rob.current_instructions[floor:instruction_id+self.amount_of_instructions_in_features+1] + added_zeroes
-        # added_zeroes = added_zeroes[:-1]
+        # added_zeroes = added_zeroes[:-1]_
         # floor = 0 if len(added_zeroes) == 0 else instruction_id - self.amount_of_instructions_in_features+1
         # padded_actions = rob.last_subsequent_actions[floor:]
         # features = features + padded_instructions + padded_actions

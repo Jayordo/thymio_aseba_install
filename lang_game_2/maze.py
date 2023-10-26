@@ -112,9 +112,9 @@ class Maze:
     def move(self, player_name: str, x_vel: float, y_vel: float):
         player = self.entities["players"][player_name][1]
         player.x += x_vel * self.player_size
-        collided_x = self.check_collision(player, x_vel, True)
+        self.check_collision(player, x_vel, True)
         player.y += y_vel * self.player_size
-        collided_y = self.check_collision(player, y_vel, False)
+        self.check_collision(player, y_vel, False)
         self.line_entities["player_rays"][player_name][1] = player.center
         self.line_entities["player_rays"][player_name][2] = self.calculate_endpoint(player, [x_vel, y_vel])
         self.calculate_distance_to_forward_block(player_name)
@@ -189,8 +189,14 @@ class Maze:
     def keypress_handler(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                # this doesnt work with the returning in other random functions
                 return True
             if event.type == pygame.KEYDOWN:
+                if pygame.key.name(event.key) == "escape":
+                    return True
+                if pygame.key.name(event.key) == "right":
+                    self.gui_turns_to_skip = 1
+                    self.gui = False
                 if pygame.key.name(event.key) == "f":
                     self.gui_turns_to_skip = 100
                     self.gui = False
@@ -202,7 +208,6 @@ class Maze:
                     pygame.display.set_mode(flags=pygame.HIDDEN)
                     self.gui_turns_to_skip = None
                 print(pygame.key.name(event.key))
-        return False
 
     @staticmethod
     def kill_pygame():
