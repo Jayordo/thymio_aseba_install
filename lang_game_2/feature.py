@@ -13,7 +13,7 @@ class Feature:
         factor = 1 / (max_value - min_value)
         for e_i, _ in enumerate(self.contents):
             if self.distance_type[e_i] != bool:
-                self.contents[e_i] = self.contents[e_i]*factor
+                self.contents[e_i] = self.contents[e_i] * factor
 
     def have_equal_distance_type(self, other: "Feature"):
         for e_i, element in enumerate(self.distance_type):
@@ -28,6 +28,7 @@ class Feature:
         for e_i, _ in enumerate(self.contents):
             if self.distance_type[e_i] == int or self.distance_type[e_i] == float:
                 total_sum += (self.contents[e_i] - other.contents[e_i]) ** 2
-            if self.distance_type[e_i] == bool:
+            elif self.distance_type[e_i] == bool:
                 total_sum += 0 if self.contents[e_i] == other.contents[e_i] else 1
         return total_sum
+

@@ -8,7 +8,7 @@ from feature import Feature
 
 
 class Game:
-    def __init__(self, timeout, amount_of_agents, seed, gui=False):
+    def __init__(self, timeout: int, amount_of_agents: int, seed: int, gui: bool = False):
         # given
         random.seed(seed)
         np.random.seed(seed)
@@ -30,7 +30,7 @@ class Game:
         self.amount_of_instructions_in_features = 2
         self.params = dict({
             "action_types": [],
-            "reward_factor": 10,
+            "reward_factor": 20,
             "punish_factor": 1
         })
         # startup functions
@@ -93,6 +93,7 @@ class Game:
             self.generate_env_features(requester)
             response = requester.parse_input(self.current_requested_food)
             fetcher.current_instructions.append(response)
+
             word_count += 1
         fetcher.current_instructions_received_from = requester.name
 
@@ -132,6 +133,7 @@ class Game:
                         self.reward_or_punish_robs(rob, requester)
                     else:
                         rob.role = "requester"
+
                     rob.current_chain_length += 1
             self.timeout -= 1
             self.end_of_round_handler()
@@ -206,7 +208,7 @@ class Game:
         f4 = Feature(last_instruction, [bool, bool])
         f5 = Feature([rob.current_instructions_received_from], [bool])
         features = [
-            f1,
+            # f1,
             f2,
             # f3,
             # f4,

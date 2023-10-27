@@ -1,10 +1,8 @@
 from scipy.spatial.distance import pdist
-
-from game import random
-from game import np
-import math
 from line_profiler_pycharm import profile
 from feature import Feature
+from game import np
+from game import random
 
 
 class Agent:
@@ -66,14 +64,14 @@ class Agent:
                 converted_features.append(feature_set[f_i])
                 other_converted_features.append(other_feature_set[f_i])
             return self.distance_between_lists(converted_features, other_converted_features)
-            # return pdist([feature_set, other_feature_set])
+            # return pdist([converted_features, other_converted_features])
 
     @staticmethod
     def distance_between_lists(first_list: list[Feature], other_list: list[Feature]):
         total_sum = 0
         for f_i, feature in enumerate(first_list):
             total_sum += feature.squared_distance_with(other_list[f_i])
-        return math.sqrt(total_sum)
+        return total_sum
 
     @profile
     def feature_compare(self, given_input: tuple):
@@ -106,7 +104,7 @@ class Agent:
 
     def reset_to_init(self):
         self.found_food = False
-        self.current_chain_length = 0
+        self.current_chain_length = 1
         self.current_instructions = []
         self.current_env_features = []
         self.current_instructions_received_from = None
