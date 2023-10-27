@@ -1,8 +1,9 @@
 # from game import random
 # from game import np
-from game import Game
-from agent import Agent
 import pandas as pd
+
+from game import Game
+from game import Agent
 
 
 class GameAnalysis:

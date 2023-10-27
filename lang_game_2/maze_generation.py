@@ -1,5 +1,5 @@
-from game import random
 from game import np
+from game import random
 
 
 class MazeGenerator:

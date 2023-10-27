@@ -1,7 +1,4 @@
-from scipy.spatial.distance import pdist
-from line_profiler_pycharm import profile
-from feature import Feature
-from game import np
+from feature import FeatureVector
 from game import random
 
 
@@ -11,26 +8,24 @@ class Agent:
         self.params = params
         self.name = name
         # inits
-        self.vocab = dict()
+        self.vocab = {}
         self.role = "fetcher"
         self.found_food = False
         self.rotation = 0
         self.current_chain_length = 0
-
         # This logging stuff needs a rework
         self.current_instructions_received_from = None
         self.current_instructions = []
-        self.current_env_features = []
+        self.current_env_features = FeatureVector()
         self.last_subsequent_instructions = []
         self.last_subsequent_env_features = []
         self.last_subsequent_actions = []
         self.last_subsequent_locations = []
-        self.logs = dict({
+        self.logs = {
             "food_found": 0,
             "taken_paths": [],
             "given_sentences": []
-        })
-
+        }
         # startup functions
         self.possible_actions = self.generate_possible_actions()
 
@@ -43,7 +38,7 @@ class Agent:
             action_type += 1
         return possible_actions
 
-    def is_mistakes_higher_then_inertia(self, given_input: tuple, action: tuple):
+    def is_mistakes_higher_than_inertia(self, given_input: tuple, action: tuple):
         inertia, mistakes = self.vocab[given_input][action][1]
         return mistakes > inertia
 
@@ -54,47 +49,26 @@ class Agent:
         self.last_subsequent_env_features = []
         self.current_instructions_received_from = None
 
-    @profile
-    def comparison_metrics(self, feature_set: list, other_feature_set: list, method="euclid"):
-        if method == "euclid":
-            converted_features = other_converted_features = []
-            for f_i, feature in enumerate(feature_set):
-                if not feature or not other_feature_set[f_i]:
-                    continue
-                converted_features.append(feature_set[f_i])
-                other_converted_features.append(other_feature_set[f_i])
-            return self.distance_between_lists(converted_features, other_converted_features)
-            # return pdist([converted_features, other_converted_features])
-
-    @staticmethod
-    def distance_between_lists(first_list: list[Feature], other_list: list[Feature]):
-        total_sum = 0
-        for f_i, feature in enumerate(first_list):
-            total_sum += feature.squared_distance_with(other_list[f_i])
-        return total_sum
-
-    @profile
     def feature_compare(self, given_input: tuple):
-        best_metric_low = 10000000000000000
+        min_metric = float('inf')
         best_action = None
         for action, action_data in self.vocab[given_input].items():
             known_feature_set = action_data[0]
-            metric = self.comparison_metrics(known_feature_set, self.current_env_features)
-            if metric < best_metric_low:
-                best_metric_low = metric
+            metric = self.current_env_features.manhattan_distance(known_feature_set)
+            if metric < min_metric:
+                min_metric = metric
                 best_action = action
         return best_action
 
-    @profile
     def parse_input(self, given_input: tuple):
-        if given_input not in list(self.vocab.keys()):
-            self.vocab[given_input] = dict()
+        if given_input not in self.vocab:
+            self.vocab[given_input] = {}
             self.make_random_map(given_input)
         action = self.feature_compare(given_input)
-        if not action:
-            print("why does this happen?")
-            action = self.make_random_map(given_input)
-        if self.is_mistakes_higher_then_inertia(given_input, action):
+        # if not action:
+        #     print("why does this happen?")
+        #     action = self.make_random_map(given_input)
+        if self.is_mistakes_higher_than_inertia(given_input, action):
             action = self.make_random_map(given_input)
         # improve together with logging
         self.last_subsequent_env_features.append(self.current_env_features)
@@ -114,15 +88,15 @@ class Agent:
         self.vocab[given_input][action] = [self.current_env_features, [0, 0]]
         return action
 
-    @profile
     def reward_or_punish(self, given_input: tuple, action: tuple, punish: bool):
+        action_data = self.vocab[given_input][action]
         if not punish:
             # increase inertia
-            self.vocab[given_input][action][1][0] += self.params["reward_factor"]
+            action_data[1][0] += self.params["reward_factor"]
             # reset mistakes
-            self.vocab[given_input][action][1][1] = 0
+            action_data[1][1] = 0
         else:
-            self.vocab[given_input][action][1][1] += self.params["punish_factor"]
+            action_data[1][1] += self.params["punish_factor"]
 
     def write_to_logs(self):
         self.log_instruction_data()

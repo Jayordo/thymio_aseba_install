@@ -1,10 +1,10 @@
-import numpy as np
 import random
-# import pygame
+
+import numpy as np
+
 from agent import Agent
+from feature import FeatureVector
 from maze import Maze
-from line_profiler_pycharm import profile
-from feature import Feature
 
 
 class Game:
@@ -23,16 +23,16 @@ class Game:
         self.last_hundred_results = []
         # statics
         self.arena_size = 8
-        difficulty = 0.5
+        difficulty = 0.8
         fps = 0
         self.max_chain_length = 1
         self.max_sentence_length = 10
         self.amount_of_instructions_in_features = 2
-        self.params = dict({
+        self.params = {
             "action_types": [],
             "reward_factor": 20,
             "punish_factor": 1
-        })
+        }
         # startup functions
         self.maze = Maze(self.amount_of_agents, self.arena_size, difficulty, gui, fps)
         self.food_types = self.set_food_types(2)
@@ -85,7 +85,6 @@ class Game:
                         return rob2
         return None
 
-    @profile
     def collect_instructions(self, fetcher: Agent, requester: Agent):
         # possible eventually merge this with execute action and execute actions
         word_count = 0
@@ -102,7 +101,6 @@ class Game:
             fetcher.found_food = True
 
     @staticmethod
-    @profile
     def reward_or_punish_robs(fetcher: Agent, requester: Agent):
         punish = False if fetcher.found_food else True
         f_instructions_index = len(fetcher.last_subsequent_instructions) - 1
@@ -169,7 +167,6 @@ class Game:
     def end_of_game_handler(self):
         self.maze.kill_pygame()
 
-    @profile
     def execute_instructions(self, rob: Agent):
         for instruction_id, instruction in enumerate(rob.current_instructions):
             self.kill_command(self.maze.keypress_handler())
@@ -180,7 +177,6 @@ class Game:
                 rob.current_instructions = rob.current_instructions[:instruction_id + 1]
                 return
 
-    @profile
     def execute_action(self, rob: Agent, action_type: int, amount: int):
         if action_type == 0:
             radians = np.deg2rad(rob.rotation)
@@ -196,25 +192,15 @@ class Game:
             rob.rotation = (rob.rotation + (int(amount * degrees_per_bucket))) % 360
 
     def generate_env_features(self, rob: Agent):
-        last_action = (-1, -1) if len(rob.last_subsequent_actions) == 0 else rob.last_subsequent_actions[-1]
-        last_instruction = (-1, -1) if len(rob.last_subsequent_instructions) == 0 else rob.last_subsequent_instructions[
-            -1]
-        f1 = Feature([self.maze.calculate_distance_to_forward_block(rob.name)], [float])
-        f1.normalise(0, self.arena_size)
-        f2 = Feature([rob.rotation], [int])
-        f2.normalise(0, self.action_buckets["rotation_buckets"])
-        f3 = Feature(last_action, [bool, int])
-        f3.normalise(0, self.action_buckets["movement_buckets"])
-        f4 = Feature(last_instruction, [bool, bool])
-        f5 = Feature([rob.current_instructions_received_from], [bool])
-        features = [
-            # f1,
-            f2,
-            # f3,
-            # f4,
-            # f5
-            # colour ray casting or percentage of vision ray-casting
-        ]
+        rob.current_env_features = FeatureVector()
+        # last_action = (-1, -1) if len(rob.last_subsequent_actions) == 0 else rob.last_subsequent_actions[-1]
+        # last_instruction = (-1, -1) if len(rob.last_subsequent_instructions) == 0 else rob.last_subsequent_instructions[
+        #     -1]
+        rob.current_env_features.add_features(self.maze.calculate_distance_to_forward_block(rob.name), float, [0, self.arena_size])
+        rob.current_env_features.add_features(rob.rotation, int, [0, self.action_buckets["rotation_buckets"]])
+        # rob.current_env_features.add_features(last_action, [bool, int], [0, self.action_buckets["movement_buckets"]])
+        # rob.current_env_features.add_features(last_instruction, [bool, bool])
+        # rob.current_env_features.add_features([rob.current_instructions_received_from], [bool])
 
         # added_zeroes = (self.amount_of_instructions_in_features - instruction_id)*[0]
         # floor = 0 if len(added_zeroes)==0 else instruction_id-self.amount_of_instructions_in_features
@@ -226,7 +212,6 @@ class Game:
         # features = features + padded_instructions + padded_actions
 
         # normalise features here
-        rob.current_env_features = features
 
     @property
     def total_found_food(self):

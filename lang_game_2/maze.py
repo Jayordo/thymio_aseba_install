@@ -1,7 +1,10 @@
-from maze_generation import MazeGenerator
-from game import random
-from game import np
+from os import environ
+
+environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import pygame
+from game import np
+from game import random
+from maze_generation import MazeGenerator
 
 
 class Maze:
