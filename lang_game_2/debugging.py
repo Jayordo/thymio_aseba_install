@@ -1,15 +1,15 @@
 import multiprocessing as mp
 from multiprocessing import Pool, Manager
 
-from game_analysis import GameAnalysis
 from game import Game
 from game import random
+from game_analysis import GameAnalysis
 
 
 def generate_random_seeds(amount):
     seeds = set()
     while len(seeds) < amount:
-        seeds.add(random.randint(0, 10000))
+        seeds.add(random.randint(0, 1000))
     return seeds
 
 
@@ -34,13 +34,13 @@ def find_passable_game(initial_timeout, num_agents, seed, stop_event, passable_s
 
 if __name__ == '__main__':
     with Manager() as manager:
-        initial_timeout = 1000
+        initial_timeout = 100
         num_agents = 2
         num_cpu = mp.cpu_count()
         stop_event = manager.Event()
-        passable_seed = manager.Value("i", -1)
+        passable_seed = manager.Value("i", 0)
         with Pool(num_cpu) as pool:
-            seeds = list(generate_random_seeds(10000))
+            seeds = list(generate_random_seeds(1000))
             random.shuffle(seeds)
             iterations = [[initial_timeout, num_agents, seed, stop_event, passable_seed] for seed in seeds]
             result = pool.starmap_async(find_passable_game, iterations)

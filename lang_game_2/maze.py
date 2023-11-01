@@ -33,6 +33,7 @@ class Maze:
         # statics
         self.BLOCK_COLOR = (50, 50, 255)
         self.BG_COLOR = (0, 0, 0)
+        self.closeness_factor = 4
 
         # pygame dependent functions
         pygame.init()
@@ -64,10 +65,27 @@ class Maze:
                                          flags=pygame.SCALED)
         return screen, unit_size
 
+    def shortest_distance_to_food(self, x, y):
+        shortest = float('inf')
+        for name, food_object in self.entities["food"].items():
+            distance = pygame.math.Vector2(x, y).distance_to([food_object[1].x/self.unit_size, food_object[1].y/self.unit_size])
+            if distance < shortest:
+                shortest = distance
+        return shortest
+
+    def distance_to_start(self, x, y):
+        return pygame.math.Vector2(x, y).distance_to(self.player_starting_pos)
+
+    def is_coordinate_close_to_start_or_food(self, x, y):
+        closeness = self.arena_size / self.closeness_factor
+        return self.shortest_distance_to_food(x, y) < closeness or self.distance_to_start(x, y) < closeness
+
     def add_food(self, name: tuple):
         x, y = self.select_random_empty_cell()
-        while pygame.math.Vector2(x, y).distance_to(self.player_starting_pos) < self.arena_size / 3:
+        too_close = self.is_coordinate_close_to_start_or_food(x, y)
+        while too_close:
             x, y = self.select_random_empty_cell()
+            too_close = self.is_coordinate_close_to_start_or_food(x, y)
         self.template[y] = self.template[y][:x] + "o" + self.template[y][x + 1:]
         food_object = pygame.Rect((self.unit_size * x, self.unit_size * y, self.food_size, self.food_size))
         self.entities["food"][name] = [self.generate_random_colour(), food_object]
@@ -126,7 +144,7 @@ class Maze:
             self.show()
 
     def calculate_distance_to_forward_block(self, player_name: str):
-        closest_block_distance = 100000000
+        closest_block_distance = float('inf')
         for _, block in self.entities["blocks"].values():
             _, start_pos, end_pos = self.line_entities["player_rays"][player_name]
             clipped_line = block.clipline(start_pos, end_pos)
@@ -186,7 +204,6 @@ class Maze:
             output_string = f""
             for element in elements_to_print:
                 output_string += f"{element} "
-            output_string += "%"
             pygame.display.set_caption(output_string)
 
     def keypress_handler(self):
